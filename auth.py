@@ -7,7 +7,10 @@ from functools import wraps
 from flask import request, jsonify
 from models import get_db
 
-JWT_SECRET = os.environ.get('JWT_SECRET', 'socialshield-super-secret-key-1337')
+JWT_SECRET = os.environ.get('JWT_SECRET', 'socialshield-production-grade-hmac-sha256-secret-key-32bytes+')
+
+def _utcnow():
+    return datetime.datetime.now(datetime.timezone.utc)
 
 def generate_token(user_id, role, name, email):
     payload = {
@@ -15,7 +18,7 @@ def generate_token(user_id, role, name, email):
         'role': role,
         'name': name,
         'email': email,
-        'exp': datetime.datetime.utcnow() + datetime.timedelta(days=1)
+        'exp': _utcnow() + datetime.timedelta(days=1)
     }
     return jwt.encode(payload, JWT_SECRET, algorithm='HS256')
 
@@ -87,13 +90,12 @@ def register_user(email, password, name, role='user'):
         'role': role,
         'is_verified': False,
         'verification_token': verification_token,
-        'created_at': datetime.datetime.utcnow()
+        'created_at': _utcnow()
     }
     
     result = users_col.insert_one(user_doc)
     inserted_id = str(result.inserted_id)
     
-    # Auto-seed mock admin/analyst roles if it's the first registration, or for ease of testing
     return {
         'message': 'Registration successful! Verification email sent.',
         'user_id': inserted_id,
@@ -148,25 +150,25 @@ def forgot_password_request(email):
     user = users_col.find_one({'email': email})
     if not user:
         return {'error': 'No account associated with this email'}
-    
+        
     reset_token = str(uuid.uuid4())
     users_col.update_one(
         {'_id': user['_id']},
         {'$set': {'reset_token': reset_token}}
     )
     return {
-        'message': 'Password reset token generated.',
+        'message': 'Password reset instructions sent to your email.',
         'reset_token': reset_token
     }
 
-def reset_password_with_token(reset_token, new_password):
+def reset_password_with_token(token, new_password):
     db = get_db()
     users_col = db['users']
     
-    user = users_col.find_one({'reset_token': reset_token})
+    user = users_col.find_one({'reset_token': token})
     if not user:
         return {'error': 'Invalid or expired reset token'}
-    
+        
     salt = bcrypt.gensalt()
     hashed_password = bcrypt.hashpw(new_password.encode('utf-8'), salt).decode('utf-8')
     
@@ -174,4 +176,4 @@ def reset_password_with_token(reset_token, new_password):
         {'_id': user['_id']},
         {'$set': {'password': hashed_password, 'reset_token': None}}
     )
-    return {'message': 'Password has been reset successfully!'}
+    return {'message': 'Password reset successful! You can now log in.'}

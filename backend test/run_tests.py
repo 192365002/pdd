@@ -468,6 +468,9 @@ def main():
     
     print(f"\n{Colors.WHITE}Saving results into Excel workbook...{Colors.RESET}")
     save_backend_results_to_excel(results, data, EXCEL_OUTPUT)
+    
+    if failed_count > 0:
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()

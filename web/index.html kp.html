@@ -1,0 +1,1089 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SocialShield — Real-Time Multi-Modal AI Fraud & Deepfake Detection</title>
+    <meta name="description"
+        content="State-of-the-art real-time AI fraud detection system for image deepfakes, voice clones, video temporal tampering, text scam NLP, and phishing URLs." />
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+        rel="stylesheet" />
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+
+    <!-- ── Top Threat Intelligence Marquee ── -->
+    <div class="threat-marquee-bar" id="threatMarquee">
+        <div class="marquee-tag">
+            <span class="live-pulse-dot"></span>
+            <span>LIVE INTEL</span>
+        </div>
+        <div class="marquee-content-wrap">
+            <div class="marquee-text" id="marqueeStream">
+                <span class="m-item danger"><span class="m-badge">CRITICAL</span> HiFi-GAN Voice Clone incident
+                    intercepted in
+                    North America</span>
+                <span class="m-item warning"><span class="m-badge">SUSPICIOUS</span> Phishing campaign detected
+                    targeting
+                    financial SSO credentials</span>
+                <span class="m-item success"><span class="m-badge">DEFENSE</span> 2D Fourier DFT spectrum engine updated
+                    • 99.4%
+                    precision</span>
+                <span class="m-item info"><span class="m-badge">RADAR</span> 12,480+ digital media items scanned in last
+                    24h</span>
+            </div>
+        </div>
+        <div class="marquee-status">
+            <span class="status-indicator online"></span>
+            <span class="status-text" id="sseStatus">STREAM LIVE</span>
+            <span class="latency-badge" id="latencyBadge">38ms</span>
+        </div>
+    </div>
+
+    <!-- ── Navigation ── -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-container">
+            <a href="#" class="nav-logo">
+                <div class="logo-shield">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                        <path d="M12 2L3 7v5c0 5.5 3.8 10.7 9 12 5.2-1.3 9-6.5 9-12V7L12 2z" fill="url(#brandGrad)" />
+                        <path d="M9 12l2 2 4-4" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                        <defs>
+                            <linearGradient id="brandGrad" x1="3" y1="2" x2="21" y2="24" gradientUnits="userSpaceOnUse">
+                                <stop stop-color="#00D4FF" />
+                                <stop offset="0.5" stop-color="#8B5CF6" />
+                                <stop offset="1" stop-color="#06FFA5" />
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                </div>
+                <div class="logo-text-group">
+                    <span class="logo-title">Social<span class="cyan-glow">Shield</span></span>
+                    <span class="logo-sub">AI REAL-TIME DEFENSE</span>
+                </div>
+            </a>
+
+            <!-- Center Links -->
+            <div class="nav-links">
+                <a href="#scanner" class="nav-link active" data-nav="scanner">
+                    <span class="nav-icon">⚡</span> Scanner Hub
+                </a>
+                <a href="#map" class="nav-link" data-nav="map">
+                    <span class="nav-icon">🗺️</span> Cyber Threat Map
+                </a>
+                <a href="#analyst" class="nav-link" data-nav="analyst" id="navAnalyst">
+                    <span class="nav-icon">🕵️</span> SOC War Room
+                </a>
+                <a href="#admin" class="nav-link" data-nav="admin" id="navAdmin">
+                    <span class="nav-icon">⚙️</span> Admin Center
+                </a>
+                <a href="#history" class="nav-link" data-nav="history">
+                    <span class="nav-icon">📜</span> History
+                </a>
+            </div>
+
+            <!-- Right Controls: Persona Switcher & Auth -->
+            <div class="nav-actions">
+                <!-- Persona Quick Selector -->
+                <div class="persona-selector-wrap">
+                    <button class="persona-btn" id="personaBtn" title="Switch User Role">
+                        <span class="persona-avatar" id="currentRoleAvatar">🛡️</span>
+                        <span class="persona-label" id="currentRoleName">Alex (User)</span>
+                        <span class="persona-caret">▾</span>
+                    </button>
+                    <div class="persona-dropdown" id="personaDropdown">
+                        <div class="persona-opt" data-role="user" data-email="user@socialshield.ai"
+                            data-name="Alex (Demo User)">
+                            <span class="p-icon">🛡️</span>
+                            <div>
+                                <div class="p-title">Standard User</div>
+                                <div class="p-sub">Scan tools & personal trust score</div>
+                            </div>
+                        </div>
+                        <div class="persona-opt" data-role="analyst" data-email="analyst@socialshield.ai"
+                            data-name="Threat Analyst">
+                            <span class="p-icon">🕵️</span>
+                            <div>
+                                <div class="p-title">Threat Analyst</div>
+                                <div class="p-sub">SOC incident queue & threat triage</div>
+                            </div>
+                        </div>
+                        <div class="persona-opt" data-role="admin" data-email="admin@socialshield.ai"
+                            data-name="Security Admin">
+                            <span class="p-icon">⚙️</span>
+                            <div>
+                                <div class="p-title">Security Admin</div>
+                                <div class="p-sub">User manager & cluster health</div>
+                            </div>
+                        </div>
+                        <div class="persona-opt" data-role="guest" data-email="" data-name="Guest Mode">
+                            <span class="p-icon">👤</span>
+                            <div>
+                                <div class="p-title">Guest Mode</div>
+                                <div class="p-sub">Quick instant scan without login</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="btn-auth" id="openAuthModalBtn">Sign In</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ── Hero & Live Telemetry Section ── -->
+    <section class="hero-section">
+        <div class="cyber-grid-bg"></div>
+        <div class="glow-orb orb-cyan"></div>
+        <div class="glow-orb orb-violet"></div>
+        <div class="glow-orb orb-emerald"></div>
+
+        <div class="container hero-container">
+            <div class="hero-badge-wrap">
+                <span class="hero-chip">
+                    <span class="hero-chip-radar"></span>
+                    6-MODAL REAL-TIME AI NEURAL ENGINE
+                </span>
+            </div>
+
+            <h1 class="hero-main-title">
+                Real-Time <span class="gradient-text">Deepfake & Fraud</span> Detection System
+            </h1>
+            <p class="hero-desc">
+                Instant AI protection across <strong>Images</strong> (2D DFT Spectrum), <strong>Audio</strong> (Live Mic
+                Voice
+                Clone),
+                <strong>Videos</strong> (Temporal Consistency), <strong>Text</strong> (Live Keystroke NLP),
+                <strong>URLs</strong>, and <strong>Social Profiles</strong>.
+            </p>
+
+            <!-- ── Live Metrics Ribbon ── -->
+            <div class="metrics-ribbon">
+                <!-- Metric 1: Trust Score -->
+                <div class="metric-card trust-card">
+                    <div class="trust-dial-wrap">
+                        <svg class="trust-dial" width="80" height="80" viewBox="0 0 80 80">
+                            <circle cx="40" cy="40" r="32" class="dial-bg" />
+                            <circle cx="40" cy="40" r="32" class="dial-fill" id="trustDialFill" stroke-dasharray="201"
+                                stroke-dashoffset="16" />
+                        </svg>
+                        <div class="trust-dial-val" id="trustScoreVal">92</div>
+                    </div>
+                    <div class="metric-info">
+                        <span class="metric-label">AI TRUST RATING</span>
+                        <span class="metric-status-text" id="trustScoreLevel">Protected • Optimal</span>
+                        <span class="metric-sub">Real-time threat resistance index</span>
+                    </div>
+                </div>
+
+                <!-- Metric 2: Total Scans -->
+                <div class="metric-card">
+                    <div class="metric-icon cyan">📊</div>
+                    <div class="metric-info">
+                        <div class="metric-num cyan" id="statTotalScans">12,492</div>
+                        <span class="metric-label">SCANS PROCESSED</span>
+                        <span class="metric-sub">Across all modalities</span>
+                    </div>
+                </div>
+
+                <!-- Metric 3: Blocked Threats -->
+                <div class="metric-card">
+                    <div class="metric-icon crimson">🛡️</div>
+                    <div class="metric-info">
+                        <div class="metric-num crimson" id="statBlockedThreats">8,426</div>
+                        <span class="metric-label">THREATS INTERCEPTED</span>
+                        <span class="metric-sub">Deepfakes & phishing neutralized</span>
+                    </div>
+                </div>
+
+                <!-- Metric 4: AI Accuracy -->
+                <div class="metric-card">
+                    <div class="metric-icon emerald">⚡</div>
+                    <div class="metric-info">
+                        <div class="metric-num emerald" id="statAccuracy">99.4%</div>
+                        <span class="metric-label">AI MODEL ENSEMBLE</span>
+                        <span class="metric-sub">Multi-classifier precision</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ── Main Workspace ── -->
+    <main class="main-content container">
+
+        <!-- ══════════════════════════════════════════════════════════════
+         SECTION 1: MULTI-MODAL SCANNER HUB
+         ══════════════════════════════════════════════════════════════ -->
+        <section class="workspace-section" id="scanner">
+            <div class="section-title-wrap">
+                <div>
+                    <span class="sub-badge">AI INVESTIGATION SUITE</span>
+                    <h2 class="section-heading">Multi-Modal <span class="gradient-text">Live Scanner Hub</span></h2>
+                </div>
+                <div class="scanner-status-pill">
+                    <span class="pulse-indicator"></span>
+                    <span>Neural Engine Active</span>
+                </div>
+            </div>
+
+            <!-- Scanner Navigation Tabs -->
+            <div class="scanner-tabs" id="scannerTabs">
+                <button class="scan-tab active" data-mode="image">
+                    <span class="tab-icon">🖼️</span>
+                    <span class="tab-title">Image Deepfake</span>
+                    <span class="tab-badge">2D DFT Spectrum</span>
+                </button>
+                <button class="scan-tab" data-mode="audio">
+                    <span class="tab-icon">🎙️</span>
+                    <span class="tab-title">Voice Clone & Mic</span>
+                    <span class="tab-badge">Live Oscilloscope</span>
+                </button>
+                <button class="scan-tab" data-mode="video">
+                    <span class="tab-icon">🎬</span>
+                    <span class="tab-title">Video Temporal</span>
+                    <span class="tab-badge">Frame Jitter</span>
+                </button>
+                <button class="scan-tab" data-mode="text">
+                    <span class="tab-icon">📝</span>
+                    <span class="tab-title">Text Scam NLP</span>
+                    <span class="tab-badge">Live Keystroke</span>
+                </button>
+                <button class="scan-tab" data-mode="url">
+                    <span class="tab-icon">🔗</span>
+                    <span class="tab-title">Phishing URL</span>
+                    <span class="tab-badge">Domain Forensics</span>
+                </button>
+                <button class="scan-tab" data-mode="profile">
+                    <span class="tab-icon">👤</span>
+                    <span class="tab-title">Social Profile</span>
+                    <span class="tab-badge">Bot Likelihood</span>
+                </button>
+            </div>
+
+            <!-- Scanner Content Panels -->
+            <div class="scanner-card">
+
+                <!-- ── TAB 1: IMAGE DEEPFAKE ── -->
+                <div class="scan-panel active" id="panel-image">
+                    <div class="panel-layout">
+                        <div class="upload-dropzone-area" id="imageDropZone">
+                            <input type="file" id="imageFileInput" accept="image/*" style="display:none;" />
+
+                            <!-- Normal Upload State -->
+                            <div class="dropzone-idle" id="imageIdleView">
+                                <div class="dropzone-icon-ring">
+                                    <span class="dropzone-icon">🖼️</span>
+                                </div>
+                                <h3 class="dropzone-title">Drop an image here or click to browse</h3>
+                                <p class="dropzone-desc">Analyzes high-frequency Fourier spectral energy, gradient
+                                    anomalies, and GAN
+                                    pixel grids.</p>
+                                <div class="dropzone-actions">
+                                    <button class="btn-cyan" id="browseImageBtn">Browse Image</button>
+                                    <button class="btn-outline" id="webcamCaptureBtn">📷 Live Camera Snapshot</button>
+                                </div>
+                                <div class="format-tags">
+                                    <span>JPG</span><span>PNG</span><span>WEBP</span><span>Max 30MB</span>
+                                </div>
+                            </div>
+
+                            <!-- Camera Capture Stream View -->
+                            <div class="camera-stream-view" id="cameraView" style="display:none;">
+                                <video id="webcamVideo" autoplay playsinline></video>
+                                <canvas id="cameraCanvas" style="display:none;"></canvas>
+                                <div class="camera-controls">
+                                    <button class="btn-emerald" id="snapPhotoBtn">📸 Take Snapshot & Scan</button>
+                                    <button class="btn-outline" id="closeCameraBtn">Cancel</button>
+                                </div>
+                            </div>
+
+                            <!-- Image Loaded Preview -->
+                            <div class="dropzone-preview" id="imagePreviewView" style="display:none;">
+                                <div class="preview-img-container">
+                                    <img id="imagePreviewImg" alt="Image Preview" />
+                                    <div class="preview-radar-overlay">
+                                        <div class="scan-laser-line"></div>
+                                    </div>
+                                </div>
+                                <div class="preview-footer">
+                                    <span class="preview-filename" id="imageFilename">sample.jpg</span>
+                                    <button class="btn-ghost-danger" id="removeImageBtn">✕ Remove</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Panel Sidebar & Controls -->
+                        <div class="panel-side-controls">
+                            <div class="side-info-card">
+                                <h4>🔬 Optical & FFT Inspection</h4>
+                                <p>Calculates 2D Discrete Fourier Transform (DFT) spectral decay and Sobel gradient
+                                    variance to detect
+                                    StyleGAN, Midjourney, Stable Diffusion, and FaceSwap masks.</p>
+                            </div>
+
+                            <!-- Preset Sample Buttons -->
+                            <div class="sample-presets">
+                                <span class="presets-label">⚡ One-Click Test Samples:</span>
+                                <div class="presets-grid">
+                                    <button class="btn-preset danger" id="presetDeepfakeImage">
+                                        <span class="p-tag">FAKE</span> StyleGAN Face
+                                    </button>
+                                    <button class="btn-preset success" id="presetRealImage">
+                                        <span class="p-tag">REAL</span> Organic Photo
+                                    </button>
+                                </div>
+                            </div>
+
+                            <button class="btn-scan-primary" id="executeImageScanBtn" disabled>
+                                <span class="btn-scan-content">
+                                    <span class="scan-btn-icon">⚡</span>
+                                    <span>Run Deepfake Inspection</span>
+                                </span>
+                                <span class="btn-scan-loading" style="display:none;">
+                                    <span class="spinner-dot"></span> Analyzing FFT Spectrum...
+                                </span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── TAB 2: AUDIO & VOICE CLONE ── -->
+                <div class="scan-panel" id="panel-audio">
+                    <div class="panel-layout">
+                        <div class="audio-inspection-area">
+                            <!-- Real-time Oscilloscope Canvas -->
+                            <div class="oscilloscope-wrapper">
+                                <canvas id="audioOscilloscopeCanvas" width="640" height="180"></canvas>
+                                <div class="oscilloscope-overlay-label">
+                                    <span class="live-tag">LIVE SPECTRUM VISUALIZER</span>
+                                    <span id="audioFreqLabel">0 Hz - 22,050 Hz</span>
+                                </div>
+                            </div>
+
+                            <!-- Live Microphone Recorder & Audio Drop -->
+                            <div class="audio-interactive-controls">
+                                <div class="mic-record-panel">
+                                    <button class="btn-mic-record" id="micRecordBtn">
+                                        <span class="mic-icon">🎙️</span>
+                                        <span id="micBtnText">Speak into Mic (Real-Time Scan)</span>
+                                    </button>
+                                    <span class="mic-status" id="micStatusText">Click to start live voice clone
+                                        analysis</span>
+                                </div>
+
+                                <div class="audio-divider"><span>OR UPLOAD AUDIO FILE</span></div>
+
+                                <div class="audio-file-upload">
+                                    <input type="file" id="audioFileInput" accept="audio/*" style="display:none;" />
+                                    <button class="btn-outline" id="browseAudioBtn">📂 Browse WAV / MP3 / OGG</button>
+                                    <span class="audio-selected-name" id="audioSelectedName">No file selected</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Audio Side Controls -->
+                        <div class="panel-side-controls">
+                            <div class="side-info-card">
+                                <h4>🎙️ Vocoder Acoustic Forensics</h4>
+                                <p>Detects unnatural spectral centroid consistency, synthetic harmonic-to-noise ratios,
+                                    and neural
+                                    vocoder (HiFi-GAN, WaveGlow, ElevenLabs) speech synthesis signatures.</p>
+                            </div>
+
+                            <div class="sample-presets">
+                                <span class="presets-label">⚡ Test Presets:</span>
+                                <div class="presets-grid">
+                                    <button class="btn-preset danger" id="presetAiVoice">
+                                        <span class="p-tag">FAKE</span> AI Voice Clone
+                                    </button>
+                                    <button class="btn-preset success" id="presetRealVoice">
+                                        <span class="p-tag">REAL</span> Natural Human Voice
+                                    </button>
+                                </div>
+                            </div>
+
+                            <button class="btn-scan-primary" id="executeAudioScanBtn">
+                                <span class="btn-scan-content">
+                                    <span class="scan-btn-icon">⚡</span>
+                                    <span>Analyze Voice Acoustics</span>
+                                </span>
+                                <span class="btn-scan-loading" style="display:none;">
+                                    <span class="spinner-dot"></span> Checking Spectral Harmonics...
+                                </span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── TAB 3: VIDEO TEMPORAL ── -->
+                <div class="scan-panel" id="panel-video">
+                    <div class="panel-layout">
+                        <div class="upload-dropzone-area" id="videoDropZone">
+                            <input type="file" id="videoFileInput" accept="video/*" style="display:none;" />
+                            <div class="dropzone-idle" id="videoIdleView">
+                                <div class="dropzone-icon-ring"><span class="dropzone-icon">🎬</span></div>
+                                <h3 class="dropzone-title">Upload Video for Frame-by-Frame Analysis</h3>
+                                <p class="dropzone-desc">Tracks temporal landmark consistency, blink rate jitter, and
+                                    boundary warping
+                                    across frames.</p>
+                                <button class="btn-cyan" id="browseVideoBtn">Browse Video File</button>
+                                <div class="format-tags"><span>MP4</span><span>WEBM</span><span>MOV</span><span>Max
+                                        50MB</span></div>
+                            </div>
+                            <div class="dropzone-preview" id="videoPreviewView" style="display:none;">
+                                <video id="videoPreviewElement" controls
+                                    style="max-height:220px; width:100%; border-radius:8px;"></video>
+                                <div class="preview-footer">
+                                    <span class="preview-filename" id="videoFilename">clip.mp4</span>
+                                    <button class="btn-ghost-danger" id="removeVideoBtn">✕ Remove</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="panel-side-controls">
+                            <div class="side-info-card">
+                                <h4>🎬 Temporal Inconsistency Detector</h4>
+                                <p>Samples inter-frame landmark dynamics to spot face-swapping boundary flicker and
+                                    unnatural blinking
+                                    rhythms (DeepFake / RoSF / FaceForensics++).</p>
+                            </div>
+
+                            <div class="sample-presets">
+                                <span class="presets-label">⚡ Test Presets:</span>
+                                <div class="presets-grid">
+                                    <button class="btn-preset danger" id="presetDeepfakeVideo">
+                                        <span class="p-tag">FAKE</span> Deepfake Clip
+                                    </button>
+                                    <button class="btn-preset success" id="presetRealVideo">
+                                        <span class="p-tag">REAL</span> Authentic Video
+                                    </button>
+                                </div>
+                            </div>
+
+                            <button class="btn-scan-primary" id="executeVideoScanBtn">
+                                <span class="btn-scan-content">
+                                    <span class="scan-btn-icon">⚡</span>
+                                    <span>Analyze Video Frames</span>
+                                </span>
+                                <span class="btn-scan-loading" style="display:none;">
+                                    <span class="spinner-dot"></span> Sampling Temporal Frames...
+                                </span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── TAB 4: TEXT SCAM NLP (Real-Time Keystrokes) ── -->
+                <div class="scan-panel" id="panel-text">
+                    <div class="panel-layout">
+                        <div class="text-nlp-interactive-area">
+                            <div class="textarea-header">
+                                <span class="typing-indicator">
+                                    <span class="live-pulse-dot"></span> Real-Time Keystroke NLP Active
+                                </span>
+                                <span class="char-counter" id="textCharCount">0 characters</span>
+                            </div>
+
+                            <div class="text-input-wrap">
+                                <textarea id="nlpTextInput"
+                                    placeholder="Type or paste any suspicious email, SMS, DM, or customer support message here... (Scans automatically as you type!)"></textarea>
+                            </div>
+
+                            <!-- Live Threat Token Tags -->
+                            <div class="live-token-flags" id="liveTokenFlags">
+                                <span class="token-title">Identified Scam Markers:</span>
+                                <div class="token-chip-container" id="tokenChipContainer">
+                                    <span class="token-empty">No suspicious tokens detected yet. Start typing or try a
+                                        preset
+                                        below.</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="panel-side-controls">
+                            <!-- Live Dynamic Keystroke Gauge -->
+                            <div class="live-keystroke-meter">
+                                <div class="meter-title">LIVE THREAT GAUGE</div>
+                                <div class="meter-bar-track">
+                                    <div class="meter-bar-fill safe" id="keystrokeMeterFill" style="width: 5%;"></div>
+                                </div>
+                                <div class="meter-footer">
+                                    <span id="keystrokeRiskText" class="safe">SAFE (0%)</span>
+                                    <span class="meter-latency">Live NLP</span>
+                                </div>
+                            </div>
+
+                            <div class="sample-presets">
+                                <span class="presets-label">⚡ Real-World Test Presets:</span>
+                                <div class="presets-grid vertical">
+                                    <button class="btn-preset danger" id="presetTextBankScam">
+                                        <span class="p-tag">SCAM</span> Urgent Wire / Account Suspension
+                                    </button>
+                                    <button class="btn-preset danger" id="presetTextCryptoScam">
+                                        <span class="p-tag">SCAM</span> Seed Phrase / Crypto Giveaway
+                                    </button>
+                                    <button class="btn-preset success" id="presetTextSafe">
+                                        <span class="p-tag">SAFE</span> Routine Work Email
+                                    </button>
+                                </div>
+                            </div>
+
+                            <button class="btn-scan-primary" id="executeTextScanBtn">
+                                <span class="btn-scan-content">
+                                    <span class="scan-btn-icon">⚡</span>
+                                    <span>Full NLP Forensic Report</span>
+                                </span>
+                                <span class="btn-scan-loading" style="display:none;">
+                                    <span class="spinner-dot"></span> Classifying Intent...
+                                </span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── TAB 5: PHISHING URL INSPECTOR ── -->
+                <div class="scan-panel" id="panel-url">
+                    <div class="panel-layout">
+                        <div class="url-input-area">
+                            <div class="url-search-bar">
+                                <span class="search-protocol-icon">🔗</span>
+                                <input type="text" id="urlInputField"
+                                    placeholder="https://example.com/login-verify-account" />
+                                <button class="btn-cyan" id="scanUrlBtn">Scan URL</button>
+                            </div>
+
+                            <!-- Live Domain Breakdown Card -->
+                            <div class="url-breakdown-card" id="urlBreakdownCard">
+                                <div class="breakdown-item">
+                                    <span class="b-label">Protocol Security</span>
+                                    <span class="b-val" id="urlProtocolVal">HTTPS Encrypted</span>
+                                </div>
+                                <div class="breakdown-item">
+                                    <span class="b-label">TLD Risk Index</span>
+                                    <span class="b-val" id="urlTldVal">Standard (.com)</span>
+                                </div>
+                                <div class="breakdown-item">
+                                    <span class="b-label">Domain Deception Flags</span>
+                                    <span class="b-val" id="urlDeceptionVal">0 Flags</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="panel-side-controls">
+                            <div class="side-info-card">
+                                <h4>🔗 Domain Heuristics & Blacklists</h4>
+                                <p>Inspects punycode spoofing, high-risk TLDs (.xyz, .click, .tk), excessive subdomain
+                                    nesting, and
+                                    credential phishing keywords.</p>
+                            </div>
+
+                            <div class="sample-presets">
+                                <span class="presets-label">⚡ Test Presets:</span>
+                                <div class="presets-grid vertical">
+                                    <button class="btn-preset danger" id="presetUrlPhish">
+                                        <span class="p-tag">PHISHING</span> http://verify-paypal-login.xyz
+                                    </button>
+                                    <button class="btn-preset success" id="presetUrlSafe">
+                                        <span class="p-tag">SAFE</span> https://google.com
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── TAB 6: SOCIAL PROFILE BOT SCANNER ── -->
+                <div class="scan-panel" id="panel-profile">
+                    <div class="panel-layout">
+                        <div class="profile-form-grid">
+                            <div class="form-group">
+                                <label>Username / Handle</label>
+                                <input type="text" id="profUsername" placeholder="@crypto_promoter991" />
+                            </div>
+                            <div class="form-group">
+                                <label>Followers Count</label>
+                                <input type="number" id="profFollowers" placeholder="14" />
+                            </div>
+                            <div class="form-group">
+                                <label>Following Count</label>
+                                <input type="number" id="profFollowing" placeholder="1850" />
+                            </div>
+                            <div class="form-group">
+                                <label>Account Age (Days)</label>
+                                <input type="number" id="profAge" placeholder="5" />
+                            </div>
+                            <div class="form-group full-width">
+                                <label>Account Bio / Description</label>
+                                <textarea id="profBio" rows="2"
+                                    placeholder="DM for crypto trading signals, 500% guaranteed return, whatsapp me now..."></textarea>
+                            </div>
+                        </div>
+
+                        <div class="panel-side-controls">
+                            <div class="side-info-card">
+                                <h4>👤 Social Engineering Bot Detector</h4>
+                                <p>Evaluates follower-to-following ratios, bot naming entropy, and financial
+                                    solicitation trigger
+                                    patterns in user bios.</p>
+                            </div>
+
+                            <div class="sample-presets">
+                                <span class="presets-label">⚡ Test Presets:</span>
+                                <div class="presets-grid">
+                                    <button class="btn-preset danger" id="presetBotProfile">
+                                        <span class="p-tag">BOT</span> Crypto Impersonator
+                                    </button>
+                                    <button class="btn-preset success" id="presetRealProfile">
+                                        <span class="p-tag">REAL</span> Authentic Creator
+                                    </button>
+                                </div>
+                            </div>
+
+                            <button class="btn-scan-primary" id="executeProfileScanBtn">
+                                <span class="btn-scan-content">
+                                    <span class="scan-btn-icon">⚡</span>
+                                    <span>Evaluate Bot Risk</span>
+                                </span>
+                                <span class="btn-scan-loading" style="display:none;">
+                                    <span class="spinner-dot"></span> Scoring Profile Anomaly...
+                                </span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+
+        <!-- ══════════════════════════════════════════════════════════════
+         SECTION 2: REAL-TIME GLOBAL CYBER THREAT MAP
+         ══════════════════════════════════════════════════════════════ -->
+        <section class="workspace-section" id="map">
+            <div class="section-title-wrap">
+                <div>
+                    <span class="sub-badge">GLOBAL INTELLIGENCE GRID</span>
+                    <h2 class="section-heading">Live Cyber <span class="gradient-text">Threat Radar Map</span></h2>
+                </div>
+                <div class="map-live-badge">
+                    <span class="live-pulse-dot"></span>
+                    <span>Telemetry Stream Active</span>
+                </div>
+            </div>
+
+            <div class="threat-map-wrapper">
+                <!-- Interactive Cyber Map -->
+                <div class="cyber-map-container" id="cyberMapContainer">
+                    <!-- Background Radar Grid -->
+                    <svg class="map-svg-grid" viewBox="0 0 1000 500" preserveAspectRatio="none">
+                        <defs>
+                            <radialGradient id="radarScanGrad" cx="50%" cy="50%" r="50%">
+                                <stop offset="0%" stop-color="rgba(0, 212, 255, 0.15)" />
+                                <stop offset="100%" stop-color="rgba(0, 212, 255, 0)" />
+                            </radialGradient>
+                        </defs>
+                        <circle cx="500" cy="250" r="220" fill="url(#radarScanGrad)" />
+                        <circle cx="500" cy="250" r="220" stroke="rgba(0,212,255,0.15)" fill="none"
+                            stroke-dasharray="6,6" />
+                        <circle cx="500" cy="250" r="140" stroke="rgba(0,212,255,0.2)" fill="none" />
+                        <circle cx="500" cy="250" r="60" stroke="rgba(0,212,255,0.3)" fill="none" />
+                        <line x1="0" y1="250" x2="1000" y2="250" stroke="rgba(0,212,255,0.1)" />
+                        <line x1="500" y1="0" x2="500" y2="500" stroke="rgba(0,212,255,0.1)" />
+                    </svg>
+
+                    <!-- SVG Continent Paths (Futuristic Simplified Cyber Map) -->
+                    <svg class="continents-svg" viewBox="0 0 1000 500">
+                        <!-- North America -->
+                        <path d="M120,80 L280,80 L310,160 L240,220 L180,260 L140,210 L90,140 Z"
+                            class="continent-path" />
+                        <!-- South America -->
+                        <path d="M220,270 L300,280 L330,360 L280,450 L240,430 L200,340 Z" class="continent-path" />
+                        <!-- Europe -->
+                        <path d="M440,80 L560,70 L580,140 L520,180 L450,160 L430,120 Z" class="continent-path" />
+                        <!-- Africa -->
+                        <path d="M450,190 L560,190 L590,290 L540,410 L480,410 L430,280 Z" class="continent-path" />
+                        <!-- Asia -->
+                        <path d="M580,70 L860,60 L920,180 L840,260 L700,280 L600,210 L580,130 Z"
+                            class="continent-path" />
+                        <!-- Australia -->
+                        <path d="M780,340 L880,330 L900,420 L810,430 L760,380 Z" class="continent-path" />
+                    </svg>
+
+                    <!-- Dynamic Regional Threat Nodes -->
+                    <div class="map-nodes-container" id="mapNodesContainer">
+                        <!-- Nodes dynamically rendered by app.js -->
+                    </div>
+                </div>
+
+                <!-- Map Side Info & Stream Feed -->
+                <div class="map-side-feed">
+                    <div class="side-feed-header">
+                        <h4>🚨 Real-Time Attack Feed</h4>
+                        <span class="feed-badge" id="incidentCountBadge">9 Active Nodes</span>
+                    </div>
+                    <div class="incident-stream-list" id="incidentStreamList">
+                        <!-- Dynamic stream items -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ══════════════════════════════════════════════════════════════
+         SECTION 3: THREAT ANALYST SOC WAR ROOM (Role: Analyst / Admin)
+         ══════════════════════════════════════════════════════════════ -->
+        <section class="workspace-section" id="analyst">
+            <div class="section-title-wrap">
+                <div>
+                    <span class="sub-badge">SECURITY OPERATIONS CENTER</span>
+                    <h2 class="section-heading">Threat Analyst <span class="gradient-text">SOC War Room</span></h2>
+                </div>
+                <button class="btn-cyan" id="openReportThreatModalBtn">➕ Submit Incident Report</button>
+            </div>
+
+            <div class="soc-grid">
+                <!-- Threats Triage Table -->
+                <div class="soc-table-card">
+                    <div class="table-header">
+                        <h3>Active Incident Queue</h3>
+                        <span class="table-sub">Live fraud reports submitted for investigation</span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="cyber-table">
+                            <thead>
+                                <tr>
+                                    <th>Incident Type</th>
+                                    <th>Description</th>
+                                    <th>Severity</th>
+                                    <th>Region</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="socThreatsTbody">
+                                <!-- Dynamically loaded -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ══════════════════════════════════════════════════════════════
+         SECTION 4: SECURITY ADMIN CENTER (Role: Admin)
+         ══════════════════════════════════════════════════════════════ -->
+        <section class="workspace-section" id="admin">
+            <div class="section-title-wrap">
+                <div>
+                    <span class="sub-badge">ADMINISTRATION & HEALTH</span>
+                    <h2 class="section-heading">Security <span class="gradient-text">Admin Control Center</span></h2>
+                </div>
+                <div class="admin-badge">Admin Privileges Active</div>
+            </div>
+
+            <div class="admin-grid">
+                <!-- System Health Telemetry -->
+                <div class="admin-card">
+                    <h3>🖥️ Server & Cluster Telemetry</h3>
+                    <div class="telemetry-stats" id="adminTelemetry">
+                        <div class="tele-item">
+                            <span class="tele-label">Cluster Status</span>
+                            <span class="tele-val text-emerald" id="teleUptime">Operational (100%)</span>
+                        </div>
+                        <div class="tele-item">
+                            <span class="tele-label">API Latency</span>
+                            <span class="tele-val text-cyan" id="teleLatency">34 ms</span>
+                        </div>
+                        <div class="tele-item">
+                            <span class="tele-label">CPU Load</span>
+                            <span class="tele-val text-cyan" id="teleCpu">18.5%</span>
+                        </div>
+                        <div class="tele-item">
+                            <span class="tele-label">Memory Usage</span>
+                            <span class="tele-val text-cyan" id="teleMem">32.8%</span>
+                        </div>
+                        <div class="tele-item">
+                            <span class="tele-label">Database Mode</span>
+                            <span class="tele-val text-emerald" id="teleDbMode">Production InMemory / MongoDB</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Registered Users Table -->
+                <div class="admin-card full-width">
+                    <h3>👥 User Accounts & Access Control</h3>
+                    <div class="table-responsive">
+                        <table class="cyber-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Role</th>
+                                    <th>Verified</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminUsersTbody">
+                                <!-- Dynamically loaded -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ══════════════════════════════════════════════════════════════
+         SECTION 5: SCAN HISTORY
+         ══════════════════════════════════════════════════════════════ -->
+        <section class="workspace-section" id="history">
+            <div class="section-title-wrap">
+                <div>
+                    <span class="sub-badge">AUDIT TRAIL</span>
+                    <h2 class="section-heading">Scan <span class="gradient-text">History & Forensics</span></h2>
+                </div>
+                <button class="btn-outline" id="refreshHistoryBtn">🔄 Refresh Logs</button>
+            </div>
+
+            <div class="history-table-card">
+                <div class="table-responsive">
+                    <table class="cyber-table">
+                        <thead>
+                            <tr>
+                                <th>Type</th>
+                                <th>Target / Input</th>
+                                <th>Risk Score</th>
+                                <th>Verdict</th>
+                                <th>Timestamp</th>
+                                <th>Inspection</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyTbody">
+                            <!-- Dynamically populated -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+
+    <!-- ══════════════════════════════════════════════════════════════
+       MODALS: FORENSIC DETAIL, AUTH, REPORT THREAT
+       ══════════════════════════════════════════════════════════════ -->
+
+    <!-- ── 1. Detailed Forensic Investigation Modal ── -->
+    <div class="modal-backdrop" id="forensicModal" style="display:none;">
+        <div class="modal-dialog forensic-modal-dialog">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <span class="modal-badge" id="modalMediaType">IMAGE FORENSICS</span>
+                    <h3 id="modalVerdictTitle">Detailed Forensic Analysis</h3>
+                </div>
+                <button class="modal-close-btn" id="closeForensicModalBtn">✕</button>
+            </div>
+
+            <div class="modal-body forensic-body">
+                <!-- Top Verdict Bar -->
+                <div class="forensic-top-card" id="forensicTopCard">
+                    <div class="verdict-ring-wrap">
+                        <svg width="110" height="110" viewBox="0 0 110 110">
+                            <circle cx="55" cy="55" r="45" class="v-ring-bg" />
+                            <circle cx="55" cy="55" r="45" class="v-ring-fill" id="modalRingFill" stroke-dasharray="283"
+                                stroke-dashoffset="20" />
+                        </svg>
+                        <div class="v-ring-text">
+                            <span class="v-ring-val" id="modalConfidenceVal">94%</span>
+                            <span class="v-ring-sub">Confidence</span>
+                        </div>
+                    </div>
+
+                    <div class="verdict-summary-info">
+                        <div class="v-badge-row">
+                            <span class="v-pill" id="modalVerdictPill">FAKE</span>
+                            <span class="risk-indicator" id="modalRiskLevel">High Risk</span>
+                        </div>
+                        <p class="v-explanation" id="modalExplanation">Synthetic noise clusters and 2D DFT Fourier
+                            spectral spikes
+                            detected.</p>
+                    </div>
+                </div>
+
+                <!-- Probabilities Breakdown -->
+                <div class="forensic-probs-card">
+                    <h4>Probability Distribution</h4>
+                    <div class="prob-row">
+                        <span class="p-label">Synthetic / Manipulated Probability</span>
+                        <div class="p-track">
+                            <div class="p-fill crimson" id="modalFakeProbBar" style="width:94%;"></div>
+                        </div>
+                        <span class="p-pct crimson" id="modalFakeProbPct">94.0%</span>
+                    </div>
+                    <div class="prob-row">
+                        <span class="p-label">Authentic Organic Probability</span>
+                        <div class="p-track">
+                            <div class="p-fill emerald" id="modalRealProbBar" style="width:6%;"></div>
+                        </div>
+                        <span class="p-pct emerald" id="modalRealProbPct">6.0%</span>
+                    </div>
+                </div>
+
+                <!-- Technical Indicators Checklist -->
+                <div class="forensic-checklist-card">
+                    <h4>Key Anomaly Markers</h4>
+                    <ul class="anomaly-checklist" id="modalChecklist">
+                        <!-- Dynamic items -->
+                    </ul>
+                </div>
+
+                <!-- Security Recommendations -->
+                <div class="forensic-recs-card">
+                    <h4>🛡️ Protective Action Directives</h4>
+                    <ul class="recs-list" id="modalRecsList">
+                        <!-- Dynamic recs -->
+                    </ul>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn-outline" id="downloadReportBtn">📥 Download Forensic PDF/JSON Report</button>
+                <button class="btn-cyan" id="closeModalActionBtn">Done</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ── 2. Authentication Modal ── -->
+    <div class="modal-backdrop" id="authModal" style="display:none;">
+        <div class="modal-dialog auth-modal-dialog">
+            <div class="modal-header">
+                <h3>SocialShield Authentication</h3>
+                <button class="modal-close-btn" id="closeAuthModalBtn">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="auth-tabs">
+                    <button class="auth-tab active" id="tabLogin">Sign In</button>
+                    <button class="auth-tab" id="tabRegister">Register</button>
+                </div>
+
+                <!-- Login Form -->
+                <form id="loginForm" class="auth-form active">
+                    <div class="form-group">
+                        <label>Email Address</label>
+                        <input type="email" id="loginEmail" required placeholder="user@socialshield.ai" />
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input type="password" id="loginPassword" required placeholder="••••••••" />
+                    </div>
+                    <button type="submit" class="btn-cyan full-width">Sign In</button>
+                </form>
+
+                <!-- Register Form -->
+                <form id="registerForm" class="auth-form" style="display:none;">
+                    <div class="form-group">
+                        <label>Full Name</label>
+                        <input type="text" id="regName" required placeholder="Alex Mercer" />
+                    </div>
+                    <div class="form-group">
+                        <label>Email Address</label>
+                        <input type="email" id="regEmail" required placeholder="alex@domain.com" />
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input type="password" id="regPassword" required placeholder="Min 8 characters" />
+                    </div>
+                    <div class="form-group">
+                        <label>Account Role</label>
+                        <select id="regRole">
+                            <option value="user">Standard User</option>
+                            <option value="analyst">Threat Analyst</option>
+                            <option value="admin">Security Admin</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn-cyan full-width">Create Account</button>
+                </form>
+
+                <!-- 1-Click Persona Quick Access -->
+                <div class="auth-quick-access">
+                    <span>⚡ Or 1-Click Quick Demo Login:</span>
+                    <div class="quick-login-btns">
+                        <button type="button" class="btn-persona-quick" data-login="user">🛡️ Demo User</button>
+                        <button type="button" class="btn-persona-quick" data-login="analyst">🕵️ Analyst</button>
+                        <button type="button" class="btn-persona-quick" data-login="admin">⚙️ Admin</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ── 3. Submit Threat Report Modal ── -->
+    <div class="modal-backdrop" id="reportThreatModal" style="display:none;">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h3>Submit Threat Intelligence Report</h3>
+                <button class="modal-close-btn" id="closeReportThreatModalBtn">✕</button>
+            </div>
+            <div class="modal-body">
+                <form id="reportThreatForm">
+                    <div class="form-group">
+                        <label>Threat Modality</label>
+                        <select id="threatTypeSelect">
+                            <option value="Voice Clone Scam">Voice Clone Scam</option>
+                            <option value="Deepfake Image / Video">Deepfake Image / Video</option>
+                            <option value="Phishing URL Campaign">Phishing URL Campaign</option>
+                            <option value="Social Botnet Infiltration">Social Botnet Infiltration</option>
+                            <option value="Executive Impersonation">Executive Impersonation</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Severity Level</label>
+                        <select id="threatSeveritySelect">
+                            <option value="Critical">Critical</option>
+                            <option value="High">High</option>
+                            <option value="Medium">Medium</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Target Region</label>
+                        <select id="threatRegionSelect">
+                            <option value="North America">North America</option>
+                            <option value="Europe">Europe</option>
+                            <option value="South Asia">South Asia</option>
+                            <option value="East Asia">East Asia</option>
+                            <option value="Global">Global</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Incident Details & Forensics</label>
+                        <textarea id="threatDescInput" rows="3" required
+                            placeholder="Describe suspicious vectors, observed signatures, URLs, or indicators of compromise..."></textarea>
+                    </div>
+                    <button type="submit" class="btn-cyan full-width">Log Threat to SOC Queue</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Scripts -->
+    <script src="app.js"></script>
+</body>
+
+</html>

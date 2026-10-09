@@ -1,0 +1,64 @@
+name: 🛡️ SocialShield CI — Master QA & Load Test Suite (1,570+ Tests)
+
+on:
+  push:
+    branches: [ main, master, '**' ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Master QA Automation Suite: 1,570+ Tests (Selenium + Vulnerability + Appium + Load Test)
+  # ═══════════════════════════════════════════════════════════════════════════
+  master-qa-and-load-tests:
+    name: 🧪 Run All 1,570+ Automated QA, Security & Load Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🐍 Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 📦 Install Python Test Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install openpyxl
+
+      - name: 🔬 Run Core Flask Backend Unit Tests
+        run: |
+          echo "===================================================="
+          echo " Running Core Flask Unit Tests (test_backend.py)"
+          echo "===================================================="
+          python -m unittest test_backend.py -v
+
+      - name: 🚀 Run All 4 QA Suites via Master Runner (1,570+ Tests)
+        id: master_runner
+        run: |
+          echo "===================================================="
+          echo " Running 1,570+ Automated Tests Across All 4 Suites"
+          echo "===================================================="
+          python run_all_tests.py
+
+      - name: 📤 Upload All 4 Excel & JSON Test Report Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: SocialShield-Master-Test-Reports-1570-Cases
+          path: |
+            selenium_test/selenium_test_results.xlsx
+            vulnerability_test/vulnerability_test_results.xlsx
+            appium_test/appium_test_results.xlsx
+            load_test/load_test_results.xlsx
+            load_test/summary.json
+            MASTER_TEST_SUMMARY.md
+          retention-days: 30
