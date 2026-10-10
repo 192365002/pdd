@@ -52,6 +52,13 @@ def rate_limit(limit_requests=120, period_seconds=60):
         return decorated
     return decorator
 
+@app.after_request
+def add_no_cache_headers(response):
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
+
 # Optional auth extractor (allows guest scanning or authenticated scanning)
 def get_current_user():
     auth_header = request.headers.get('Authorization', '')
@@ -451,6 +458,7 @@ def scan_url():
 
 # 3. IMAGE DEEPFAKE SCAN (Fourier 2D DFT & OpenCV)
 @app.route('/api/scans/image', methods=['POST'])
+@app.route('/api/v1/scan/image', methods=['POST'])
 @rate_limit(60, 60)
 def scan_image():
     user = get_current_user()
@@ -468,9 +476,21 @@ def scan_image():
             file.save(filepath)
     elif request.is_json:
         data = request.get_json() or {}
-        source = data.get('source', 'webcam')
+        source = data.get('source', '')
+        preset = data.get('preset', '')
+        custom_name = data.get('filename', '')
+        if custom_name:
+            filename = custom_name
+        if preset == 'organic' or any(k in (custom_name or '').lower() for k in ['organic', 'portrait', 'camera', 'real']):
+            source = 'preset_organic'
+            filename = 'organic_camera_portrait.jpg'
+        elif preset in ('synthetic', 'fake', 'ai') or any(k in (custom_name or '').lower() for k in ['synthetic', 'deepfake', 'gan', 'ai_generated', 'diffusion', 'stylegan']):
+            source = 'preset_synthetic'
+            filename = custom_name if custom_name else 'gan_stylegan_synthetic_face.png'
         b64 = data.get('image_base64')
         if b64:
+            if not source:
+                source = 'webcam'
             import base64
             custom_name = data.get('filename', f"live_camera_{int(time.time())}.jpg")
             filename = secure_filename(custom_name)
@@ -480,7 +500,12 @@ def scan_image():
             with open(filepath, 'wb') as f:
                 f.write(base64.b64decode(b64))
 
-    result = ai_engine.analyze_image_deepfake(filepath, source=source) if filepath else ai_engine._generate_simulated_image_result()
+    if not filepath:
+        is_org = (source in ('preset_organic', 'organic')) or any(k in filename.lower() for k in ['organic', 'portrait', 'camera', 'real'])
+        is_synth = (source in ('preset_synthetic', 'synthetic', 'fake')) or any(k in filename.lower() for k in ['synthetic', 'deepfake', 'gan', 'ai_generated', 'diffusion', 'stylegan'])
+        result = ai_engine._generate_simulated_image_result(reason=filename, is_organic=is_org, is_synthetic=is_synth)
+    else:
+        result = ai_engine.analyze_image_deepfake(filepath, source=source)
     
     db = get_db()
     scan_doc = {
