@@ -95,15 +95,22 @@
         <div class="persona-selector-wrap">
           <button class="persona-btn" id="personaBtn" title="Switch User Role">
             <span class="persona-avatar" id="currentRoleAvatar">🛡️</span>
-            <span class="persona-label" id="currentRoleName">Shield User</span>
+            <span class="persona-label" id="currentRoleName">Aadarsh</span>
             <span class="persona-caret">▾</span>
           </button>
           <div class="persona-dropdown" id="personaDropdown">
-            <div class="persona-opt" data-role="user" data-email="user@socialshield.ai" data-name="Alex (Demo User)">
+            <div class="persona-opt" data-role="admin" data-email="aadarshavula2005@gmail.com" data-name="Aadarsh">
               <span class="p-icon">🛡️</span>
               <div>
-                <div class="p-title">Standard User</div>
-                <div class="p-sub">Scan tools & personal trust score</div>
+                <div class="p-title">Aadarsh (Owner)</div>
+                <div class="p-sub">aadarshavula2005@gmail.com • Telemetry Active</div>
+              </div>
+            </div>
+            <div class="persona-opt" data-role="user" data-email="user@socialshield.ai" data-name="New Login User">
+              <span class="p-icon">👤</span>
+              <div>
+                <div class="p-title">New Login User</div>
+                <div class="p-sub">Standard user (telemetry bar removed)</div>
               </div>
             </div>
             <div class="persona-opt" data-role="analyst" data-email="analyst@socialshield.ai"
@@ -122,7 +129,7 @@
               </div>
             </div>
             <div class="persona-opt" data-role="guest" data-email="" data-name="Guest Mode">
-              <span class="p-icon">👤</span>
+              <span class="p-icon">🌐</span>
               <div>
                 <div class="p-title">Guest Mode</div>
                 <div class="p-sub">Quick instant scan without login</div>
@@ -1000,9 +1007,10 @@
 
         <!-- 1-Click Persona Quick Access -->
         <div class="auth-quick-access">
-          <span>⚡ Or 1-Click Quick Demo Login:</span>
+          <span>⚡ 1-Click Quick Login:</span>
           <div class="quick-login-btns">
-            <button type="button" class="btn-persona-quick" data-login="user">🛡️ Demo User</button>
+            <button type="button" class="btn-persona-quick" data-login="aadarsh">🛡️ Aadarsh (Owner)</button>
+            <button type="button" class="btn-persona-quick" data-login="user">👤 New User</button>
             <button type="button" class="btn-persona-quick" data-login="analyst">🕵️ Analyst</button>
             <button type="button" class="btn-persona-quick" data-login="admin">⚙️ Admin</button>
           </div>
@@ -1064,7 +1072,7 @@
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Scripts -->
-  <script src="app.js?v=2.5"></script>
+  <script src="app.js?v=2.6"></script>
 </body>
 
 </html>
