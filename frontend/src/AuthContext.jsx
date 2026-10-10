@@ -4,6 +4,18 @@ import { healthCheck } from './api';
 
 const AuthContext = createContext(null);
 
+// Helper to extract a clean display name from an email address
+export function formatNameFromEmail(email) {
+  if (!email) return 'Shield User';
+  const prefix = email.split('@')[0];
+  if (!prefix) return 'Shield User';
+  const parts = prefix.split(/[._-]+/).filter(Boolean);
+  if (parts.length === 0) return 'Shield User';
+  return parts
+    .map((p) => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase())
+    .join(' ');
+}
+
 // Check if Firebase env vars are configured
 const hasFirebaseConfig = !!(
   import.meta.env.VITE_FIREBASE_API_KEY &&
@@ -61,26 +73,35 @@ export function AuthProvider({ children }) {
       const userData = {
         uid: cred.user.uid,
         email: cred.user.email,
-        displayName: cred.user.displayName || email.split('@')[0],
+        displayName: cred.user.displayName || formatNameFromEmail(email),
       };
       persistUser(userData, token);
       return userData;
     } else {
-      // ── Demo mode (no Firebase configured) ──
-      await new Promise((r) => setTimeout(r, 700));
+      // ── Demo / Local fallback mode (no Firebase configured) ──
+      await new Promise((r) => setTimeout(r, 600));
       const cleanEmail = email.replace(/[^a-zA-Z0-9]/g, '_');
-      const token = 'demo_' + cleanEmail;
-      const userData = { uid: cleanEmail, email, displayName: email.split('@')[0] };
+      const token = 'user_token_' + cleanEmail;
+      
+      let registeredMap = {};
+      try {
+        registeredMap = JSON.parse(localStorage.getItem('ss_registered_users') || '{}');
+      } catch {}
+      const existingUser = registeredMap[email.toLowerCase()];
+      const resolvedName = existingUser?.name || formatNameFromEmail(email);
+
+      const userData = { uid: cleanEmail, email, displayName: resolvedName };
       persistUser(userData, token);
       return userData;
     }
   };
 
   // ─── Sign Up ──────────────────────────────────────────────────────────────────
-  const signUp = async (email, password) => {
+  const signUp = async (email, password, name = '') => {
+    const finalName = name.trim() || formatNameFromEmail(email);
     if (hasFirebaseConfig) {
       const { initializeApp, getApps }               = await import('firebase/app');
-      const { getAuth, createUserWithEmailAndPassword } = await import('firebase/auth');
+      const { getAuth, createUserWithEmailAndPassword, updateProfile } = await import('firebase/auth');
       const app  = getApps().length ? getApps()[0] : initializeApp({
         apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
         authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -91,12 +112,30 @@ export function AuthProvider({ children }) {
       });
       const auth = getAuth(app);
       const cred = await createUserWithEmailAndPassword(auth, email, password);
+      try {
+        await updateProfile(cred.user, { displayName: finalName });
+      } catch (err) {
+        console.warn('Could not update Firebase profile name:', err);
+      }
       const token = await cred.user.getIdToken();
-      const userData = { uid: cred.user.uid, email: cred.user.email, displayName: email.split('@')[0] };
+      const userData = { uid: cred.user.uid, email: cred.user.email, displayName: finalName };
       persistUser(userData, token);
       return userData;
     } else {
-      return login(email, password);
+      await new Promise((r) => setTimeout(r, 600));
+      const cleanEmail = email.replace(/[^a-zA-Z0-9]/g, '_');
+      const token = 'user_token_' + cleanEmail;
+
+      // Save to local registry so future logins remember the entered name
+      try {
+        const registeredMap = JSON.parse(localStorage.getItem('ss_registered_users') || '{}');
+        registeredMap[email.toLowerCase()] = { name: finalName, email };
+        localStorage.setItem('ss_registered_users', JSON.stringify(registeredMap));
+      } catch {}
+
+      const userData = { uid: cleanEmail, email, displayName: finalName };
+      persistUser(userData, token);
+      return userData;
     }
   };
 
@@ -117,13 +156,23 @@ export function AuthProvider({ children }) {
       const provider = new GoogleAuthProvider();
       const cred     = await signInWithPopup(auth, provider);
       const token    = await cred.user.getIdToken();
-      const userData = { uid: cred.user.uid, email: cred.user.email, displayName: cred.user.displayName || cred.user.email?.split('@')[0] };
+      const userData = {
+        uid: cred.user.uid,
+        email: cred.user.email,
+        displayName: cred.user.displayName || formatNameFromEmail(cred.user.email) || 'Shield User',
+      };
       persistUser(userData, token);
       return userData;
     } else {
       await new Promise((r) => setTimeout(r, 500));
-      const userData = { uid: 'google_demo', email: 'demo@socialshield.ai', displayName: 'Demo User' };
-      persistUser(userData, 'google_demo_' + Date.now());
+      const googleEmail = 'user@socialshield.ai';
+      let registeredMap = {};
+      try {
+        registeredMap = JSON.parse(localStorage.getItem('ss_registered_users') || '{}');
+      } catch {}
+      const resolvedName = registeredMap[googleEmail]?.name || 'Shield User';
+      const userData = { uid: 'google_user_' + Date.now(), email: googleEmail, displayName: resolvedName };
+      persistUser(userData, 'google_token_' + Date.now());
       return userData;
     }
   };
@@ -158,6 +207,20 @@ export function AuthProvider({ children }) {
         console.error("Firebase profile update failed:", err);
       }
     }
+    
+    // Also update local registered map if displayName changed
+    if (user?.email && fields.displayName) {
+      try {
+        const registeredMap = JSON.parse(localStorage.getItem('ss_registered_users') || '{}');
+        registeredMap[user.email.toLowerCase()] = {
+          ...registeredMap[user.email.toLowerCase()],
+          name: fields.displayName,
+          email: user.email,
+        };
+        localStorage.setItem('ss_registered_users', JSON.stringify(registeredMap));
+      } catch {}
+    }
+
     setUser((u) => {
       const next = { ...u, ...fields };
       localStorage.setItem('ss_user', JSON.stringify(next));
@@ -166,7 +229,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, backendOnline, login, signUp, loginWithGoogle, logout, updateUser }}>
+    <AuthContext.Provider value={{ user, loading, backendOnline, login, signUp, loginWithGoogle, logout, updateUser, formatNameFromEmail }}>
       {children}
     </AuthContext.Provider>
   );

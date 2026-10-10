@@ -1,7 +1,7 @@
 // ─── Home Page ────────────────────────────────────────────────────────────────
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../AuthContext';
+import { useAuth, formatNameFromEmail } from '../AuthContext';
 import { getUserStats, getHistory } from '../api';
 
 const SCAN_TYPES = [
@@ -47,7 +47,7 @@ export default function HomePage() {
   }, []);
 
   const scoreColor = stats.trustScore >= 80 ? '#06FFA5' : stats.trustScore >= 50 ? '#FFB800' : '#FF3B3B';
-  const greetName = user?.displayName || user?.email?.split('@')[0] || 'Shield User';
+  const greetName = user?.displayName || formatNameFromEmail(user?.email) || 'Shield User';
 
   return (
     <div style={{ paddingBottom: 40 }}>

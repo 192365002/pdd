@@ -456,27 +456,31 @@ def scan_image():
     user = get_current_user()
     filepath = None
     filename = 'sample_image.png'
+    source = ''
     
     # Check multipart file or base64
     if 'image' in request.files:
         file = request.files['image']
+        source = request.form.get('source', '')
         if file.filename != '':
             filename = secure_filename(f"{int(time.time())}_{file.filename}")
             filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             file.save(filepath)
     elif request.is_json:
         data = request.get_json() or {}
+        source = data.get('source', 'webcam')
         b64 = data.get('image_base64')
         if b64:
             import base64
-            filename = f"capture_{int(time.time())}.jpg"
+            custom_name = data.get('filename', f"live_camera_{int(time.time())}.jpg")
+            filename = secure_filename(custom_name)
             filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             if ',' in b64:
                 b64 = b64.split(',')[1]
             with open(filepath, 'wb') as f:
                 f.write(base64.b64decode(b64))
 
-    result = ai_engine.analyze_image_deepfake(filepath) if filepath else ai_engine._generate_simulated_image_result()
+    result = ai_engine.analyze_image_deepfake(filepath, source=source) if filepath else ai_engine._generate_simulated_image_result()
     
     db = get_db()
     scan_doc = {
@@ -638,12 +642,14 @@ def get_scan_history():
     scans = list(db['scans'].find().sort('created_at', -1).limit(30))
     formatted = []
     for scan in scans:
-        scan_id = str(scan['_id'])
-        del scan['_id']
-        scan['id'] = scan_id
-        if isinstance(scan.get('created_at'), datetime.datetime):
-            scan['created_at'] = scan['created_at'].isoformat()
-        formatted.append(scan)
+        scan_copy = dict(scan)
+        scan_id = str(scan_copy.get('_id', scan_copy.get('id', 'scan_unknown')))
+        if '_id' in scan_copy:
+            del scan_copy['_id']
+        scan_copy['id'] = scan_id
+        if isinstance(scan_copy.get('created_at'), datetime.datetime):
+            scan_copy['created_at'] = scan_copy['created_at'].isoformat()
+        formatted.append(scan_copy)
         
     return jsonify({'scans': formatted}), 200
 

@@ -1,0 +1,66 @@
+name: Automated Security Assessment & SAST/DAST Review
+
+on:
+  push:
+    branches: [ main, master, dev ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  security-audit:
+    name: 🛡️ Multi-Modal Security Review & Vulnerability Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: 📥 Checkout Codebase
+        uses: actions/checkout@v4
+
+      - name: 🐍 Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 📦 Install Python Dependencies & Security Tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt || true
+          pip install semgrep openpyxl requests bandit safety pytest
+          if [ -f backend/requirements.txt ]; then pip install -r backend/requirements.txt || true; fi
+
+      - name: 🔍 Phase 1 & 3: Run SAST Security Code Scan (Bandit & Semgrep)
+        run: |
+          echo "Running Bandit SAST Scanner..."
+          bandit -r . -x ./backend test,./frontend test,./selenium_test,./vulnerability_test,./load_test,./appium_test -ll -ii || true
+          echo "Running Semgrep Security Ruleset..."
+          semgrep scan --config=auto --quiet || true
+
+      - name: 📦 Phase 5: Dependency & Supply-Chain Audit (Safety / pip-audit)
+        run: |
+          safety check --ignore 70612 || true
+
+      - name: ⚡ Phase 4: Run Live DAST & Backend Regression Suite
+        run: |
+          python "backend test/run_tests.py" || true
+          python "vulnerability_test/run_tests.py" || true
+
+      - name: 📊 Phase 6-8: Generate Security Artifacts & Excel Reports
+        run: |
+          python tools/generate_security_review.py
+
+      - name: 📤 Upload Security Review Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: vulnerability-test-results
+          path: |
+            Vulnerability Test Results/
+            vulnerability_test/*.xlsx
+          retention-days: 14
+
+      - name: 📢 Publish Security Review to GitHub Step Summary
+        run: |
+          cat "Vulnerability Test Results/executive-summary.md" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          cat "Vulnerability Test Results/dependency-report.md" >> $GITHUB_STEP_SUMMARY

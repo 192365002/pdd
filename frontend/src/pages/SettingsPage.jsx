@@ -1,7 +1,7 @@
 // ─── Settings Page ────────────────────────────────────────────────────────────
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../AuthContext';
+import { useAuth, formatNameFromEmail } from '../AuthContext';
 import { clearHistory } from '../api';
 
 function Toggle({ id, checked, onChange }) {
@@ -140,7 +140,7 @@ export default function SettingsPage() {
               </div>
             ) : (
               <>
-                <div style={{ fontWeight:700, fontSize:16 }}>{user?.displayName || 'Shield User'}</div>
+                <div style={{ fontWeight:700, fontSize:16 }}>{user?.displayName || formatNameFromEmail(user?.email) || 'Shield User'}</div>
                 <div className="text-muted" style={{ fontSize:13, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{user?.email}</div>
                 <div style={{ marginTop:4 }}>
                   <span style={{ fontSize:11, background:'rgba(0,212,255,0.15)', border:'1px solid rgba(0,212,255,0.3)', color:'var(--neon-blue)', padding:'2px 10px', borderRadius:20, fontWeight:600 }}>

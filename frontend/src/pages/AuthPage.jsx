@@ -5,6 +5,7 @@ import { useAuth } from '../AuthContext';
 
 export default function AuthPage() {
   const [isSignUp, setIsSignUp] = useState(false);
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
@@ -22,7 +23,7 @@ export default function AuthPage() {
     setLoading(true);
     try {
       if (isSignUp) {
-        await signUp(email, password);
+        await signUp(email, password, name);
       } else {
         await login(email, password);
       }
@@ -68,6 +69,23 @@ export default function AuthPage() {
         </p>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {/* Name field on Sign Up */}
+          {isSignUp && (
+            <div style={{ position: 'relative' }}>
+              <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', fontSize: 16 }}>👤</span>
+              <input
+                id="name"
+                type="text"
+                className="input-field"
+                placeholder="Full Name (e.g. Alex Mercer)"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                style={{ paddingLeft: 40 }}
+                autoComplete="name"
+              />
+            </div>
+          )}
+
           {/* Email */}
           <div style={{ position: 'relative' }}>
             <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', fontSize: 16 }}>✉️</span>

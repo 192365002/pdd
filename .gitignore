@@ -37,3 +37,13 @@ __pycache__/
 /app-build/
 /flutter_app/android/build/
 /flutter_app/build/
+
+# Temporary user scan uploads
+/static/uploads/capture_*
+/static/uploads/voice_record_*
+/static/uploads/live_camera_*
+/static/uploads/1791*
+/static/uploads/*.png
+/static/uploads/*.jpg
+/static/uploads/*.jpeg
+/static/uploads/*.wav

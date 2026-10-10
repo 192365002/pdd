@@ -1,6 +1,6 @@
 // ─── Layout Component — with Backend Status Indicator ────────────────────────
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { useAuth } from '../AuthContext';
+import { useAuth, formatNameFromEmail } from '../AuthContext';
 
 const NAV = [
   { to: '/home',     icon: '🏠', label: 'Home'      },
@@ -59,7 +59,7 @@ export default function Layout() {
           <div style={{ padding: '12px', borderRadius: '12px', background: 'var(--glass-white)', border: '1px solid var(--glass-border)' }}>
             <div className="text-muted" style={{ fontSize: 11, marginBottom: 3 }}>Signed in as</div>
             <div style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {user?.displayName || user?.email || 'User'}
+              {user?.displayName || formatNameFromEmail(user?.email) || 'User'}
             </div>
             <div className="text-muted" style={{ fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 1 }}>
               {user?.email}

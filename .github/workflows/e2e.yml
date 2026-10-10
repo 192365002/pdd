@@ -1,4 +1,4 @@
-name: 🛡️ SocialShield Multi-Modal E2E & Master QA Pipeline
+name: SocialShield E2E Tests
 
 on:
   push:
@@ -264,18 +264,18 @@ jobs:
           python -m pip install --upgrade pip
           pip install openpyxl
 
+      - name: 📦 Download All Individual Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: all_test_artifacts/
+        continue-on-error: true
+
       - name: 🏆 Compile Master QA Summary & Publish Step Summary
         run: |
           echo "===================================================="
           echo " Compiling Grand Total Multi-Modal E2E Master Report"
           echo "===================================================="
           python compile_master_report.py
-
-      - name: 📦 Download All Individual Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: all_test_artifacts/
-        continue-on-error: true
 
       - name: 📤 Upload Consolidated Master Test Suite Bundle
         if: always()

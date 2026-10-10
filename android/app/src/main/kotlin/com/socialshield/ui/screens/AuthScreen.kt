@@ -40,6 +40,7 @@ fun AuthScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val focusManager = LocalFocusManager.current
+    var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
@@ -146,6 +147,19 @@ fun AuthScreen(
 
             Spacer(Modifier.height(40.dp))
 
+            // Name field on Sign Up
+            if (isSignUp) {
+                ShieldTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = "Full Name",
+                    leadingIcon = { Icon(Icons.Default.Person, null, tint = NeonBlue.copy(0.7f), modifier = Modifier.size(20.dp)) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text, imeAction = ImeAction.Next),
+                    keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) })
+                )
+                Spacer(Modifier.height(16.dp))
+            }
+
             // Email field
             ShieldTextField(
                 value = email,
@@ -176,7 +190,7 @@ fun AuthScreen(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = {
                     focusManager.clearFocus()
-                    if (isSignUp) viewModel.signUp(email, password)
+                    if (isSignUp) viewModel.signUp(email, password, name)
                     else viewModel.signIn(email, password)
                 })
             )
@@ -193,7 +207,7 @@ fun AuthScreen(
             NeonButton(
                 text = if (isSignUp) "Create Account" else "Sign In",
                 onClick = {
-                    if (isSignUp) viewModel.signUp(email, password)
+                    if (isSignUp) viewModel.signUp(email, password, name)
                     else viewModel.signIn(email, password)
                 },
                 modifier = Modifier.fillMaxWidth(),

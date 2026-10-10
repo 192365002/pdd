@@ -43,7 +43,7 @@ class AuthViewModel @Inject constructor(private val auth: FirebaseAuth) : ViewMo
             .addOnFailureListener { e -> _uiState.update { it.copy(isLoading = false, error = e.message) } }
     }
 
-    fun signUp(email: String, password: String) {
+    fun signUp(email: String, password: String, name: String = "") {
         if (email.isBlank() || password.isBlank()) {
             _uiState.update { it.copy(error = "Email and password required") }
             return
@@ -54,7 +54,20 @@ class AuthViewModel @Inject constructor(private val auth: FirebaseAuth) : ViewMo
         }
         _uiState.update { it.copy(isLoading = true, error = null) }
         auth.createUserWithEmailAndPassword(email, password)
-            .addOnSuccessListener { _uiState.update { it.copy(isLoading = false, isLoggedIn = true) } }
+            .addOnSuccessListener { authResult ->
+                val user = authResult.user
+                if (user != null && name.isNotBlank()) {
+                    val profileUpdates = com.google.firebase.auth.UserProfileChangeRequest.Builder()
+                        .setDisplayName(name)
+                        .build()
+                    user.updateProfile(profileUpdates)
+                        .addOnCompleteListener {
+                            _uiState.update { it.copy(isLoading = false, isLoggedIn = true) }
+                        }
+                } else {
+                    _uiState.update { it.copy(isLoading = false, isLoggedIn = true) }
+                }
+            }
             .addOnFailureListener { e -> _uiState.update { it.copy(isLoading = false, error = e.message) } }
     }
 
@@ -100,7 +113,10 @@ class HomeViewModel @Inject constructor(
 
     init {
         val user = auth.currentUser
-        _uiState.update { it.copy(userName = user?.displayName ?: user?.email?.substringBefore('@') ?: "") }
+        val rawName = user?.displayName
+            ?: user?.email?.substringBefore('@')?.replace(".", " ")?.replace("_", " ")?.split(" ")?.joinToString(" ") { word -> word.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() } }
+            ?: "Shield User"
+        _uiState.update { it.copy(userName = rawName) }
         
         // Listen to user stats in real-time
         viewModelScope.launch {
