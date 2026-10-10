@@ -16,23 +16,42 @@ function formatNameFromEmail(email) {
   return parts.map(p => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase()).join(" ");
 }
 
+function isAadarshUser(user) {
+  if (!user) return false;
+  const email = (user.email || "").toLowerCase().trim();
+  const name = (user.name || "").toLowerCase().trim();
+  return email === "aadarshavula2005@gmail.com" || email.includes("aadarsh") || name.includes("aadarsh");
+}
+
 function getSavedUser() {
   const savedUser = localStorage.getItem("socialshield_user");
   const savedToken = localStorage.getItem("socialshield_token");
   if (savedUser) {
     try {
       const u = JSON.parse(savedUser);
+      // If previous default placeholder was saved, upgrade to Aadarsh
+      if (u.name === "Shield User" || u.name === "Demo User" || u.email === "user@socialshield.ai") {
+        u.name = "Aadarsh";
+        u.email = "aadarshavula2005@gmail.com";
+        u.role = "admin";
+        u.token = "token_aadarsh_executive_2026";
+        localStorage.setItem("socialshield_user", JSON.stringify(u));
+        localStorage.setItem("socialshield_token", u.token);
+      }
       if (savedToken) u.token = savedToken;
       return u;
     } catch (e) {}
   }
-  return {
-    id: "user_default",
-    name: "Shield User",
-    email: "user@socialshield.ai",
-    role: "user",
-    token: null
+  const defaultAadarsh = {
+    id: "user_aadarsh",
+    name: "Aadarsh",
+    email: "aadarshavula2005@gmail.com",
+    role: "admin",
+    token: "token_aadarsh_executive_2026"
   };
+  localStorage.setItem("socialshield_user", JSON.stringify(defaultAadarsh));
+  localStorage.setItem("socialshield_token", defaultAadarsh.token);
+  return defaultAadarsh;
 }
 
 let currentUser = getSavedUser();
@@ -140,11 +159,12 @@ function initAuth() {
     btn.addEventListener("click", () => {
       const role = btn.dataset.login;
       const map = {
-        user: { name: "Alex (Demo User)", email: "user@socialshield.ai" },
-        analyst: { name: "Threat Analyst", email: "analyst@socialshield.ai" },
-        admin: { name: "Security Admin", email: "admin@socialshield.ai" }
+        aadarsh: { name: "Aadarsh", email: "aadarshavula2005@gmail.com", role: "admin" },
+        user: { name: "New User", email: "newuser@socialshield.ai", role: "user" },
+        analyst: { name: "Threat Analyst", email: "analyst@socialshield.ai", role: "analyst" },
+        admin: { name: "Security Admin", email: "admin@socialshield.ai", role: "admin" }
       };
-      const info = map[role] || map.user;
+      const info = map[role] || map.aadarsh;
       currentUser = {
         id: `user_${role}`,
         name: info.name,
@@ -262,22 +282,23 @@ function updateRoleUI() {
   const roleAvatars = { user: "🛡️", analyst: "🕵️", admin: "⚙️", guest: "👤" };
   const avatarEl = document.getElementById("currentRoleAvatar");
   const nameEl = document.getElementById("currentRoleName");
-  if (avatarEl) avatarEl.textContent = roleAvatars[currentUser.role] || "🛡️";
-  if (nameEl) nameEl.textContent = currentUser.name || "User";
+  const isAadarsh = isAadarshUser(currentUser);
+
+  if (avatarEl) avatarEl.textContent = isAadarsh ? "🛡️" : (roleAvatars[currentUser.role] || "🛡️");
+  if (nameEl) nameEl.textContent = isAadarsh ? "Aadarsh" : (currentUser.name || "User");
   
-  // Hide hero marketing banner for logged-in users while keeping live telemetry cards
+  // Exclusively give this metrics ribbon bar to Aadarsh (aadarshavula2005@gmail.com)
+  // Remove this for all other / new logins
   const heroIntro = document.getElementById("heroIntroBanner");
   const heroSec = document.getElementById("heroSection");
-  const isLoggedIn = currentUser && currentUser.role && currentUser.role !== "guest" && (currentUser.token || currentUser.email);
-  if (heroIntro) {
-    heroIntro.style.display = isLoggedIn ? "none" : "block";
-  }
+  
   if (heroSec) {
-    heroSec.style.display = "block";
-    if (isLoggedIn) {
+    if (isAadarsh) {
+      heroSec.style.display = "block";
       heroSec.classList.add("compact-telemetry-mode");
+      if (heroIntro) heroIntro.style.display = "none";
     } else {
-      heroSec.classList.remove("compact-telemetry-mode");
+      heroSec.style.display = "none";
     }
   }
 
@@ -286,8 +307,8 @@ function updateRoleUI() {
   const analystSec = document.getElementById("analyst");
   const adminSec = document.getElementById("admin");
   
-  const isAnalystOrAdmin = currentUser.role === "analyst" || currentUser.role === "admin";
-  const isAdmin = currentUser.role === "admin";
+  const isAnalystOrAdmin = isAadarsh || currentUser.role === "analyst" || currentUser.role === "admin";
+  const isAdmin = isAadarsh || currentUser.role === "admin";
 
   if (navAnalyst) navAnalyst.style.display = isAnalystOrAdmin ? "flex" : "none";
   if (analystSec) analystSec.style.display = isAnalystOrAdmin ? "block" : "none";

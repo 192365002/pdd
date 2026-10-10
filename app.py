@@ -67,7 +67,7 @@ def get_current_user():
         decoded = auth.decode_token(token)
         if 'error' not in decoded:
             return decoded
-    return {'sub': 'demo_user', 'role': 'user', 'name': 'Demo User', 'email': 'user@socialshield.ai'}
+    return {'sub': 'user_aadarsh', 'role': 'admin', 'name': 'Aadarsh', 'email': 'aadarshavula2005@gmail.com'}
 
 # ====================================================
 # DB SEEDING FOR PRODUCTION-READY INITIAL STATE
@@ -82,16 +82,18 @@ def seed_initial_data():
     # 1. Seed Users if empty
     if users_col.count_documents({}) == 0:
         print("Seeding users database...")
+        auth.register_user('aadarshavula2005@gmail.com', 'Aadarsh@2026!', 'Aadarsh', 'admin')
         auth.register_user('admin@socialshield.ai', 'AdminSecure2026!', 'Security Admin', 'admin')
         auth.register_user('analyst@socialshield.ai', 'AnalystSecure2026!', 'Threat Analyst', 'analyst')
         auth.register_user('user@socialshield.ai', 'UserSecure2026!', 'Alex Demo User', 'user')
         
+        users_col.update_one({'email': 'aadarshavula2005@gmail.com'}, {'$set': {'is_verified': True, 'name': 'Aadarsh', 'role': 'admin'}})
         users_col.update_one({'email': 'admin@socialshield.ai'}, {'$set': {'is_verified': True}})
         users_col.update_one({'email': 'analyst@socialshield.ai'}, {'$set': {'is_verified': True}})
         users_col.update_one({'email': 'user@socialshield.ai'}, {'$set': {'is_verified': True}})
 
-    demo_user = users_col.find_one({'email': 'user@socialshield.ai'})
-    user_id = str(demo_user['_id']) if demo_user else "demo_user"
+    demo_user = users_col.find_one({'email': 'aadarshavula2005@gmail.com'}) or users_col.find_one({'email': 'user@socialshield.ai'})
+    user_id = str(demo_user['_id']) if demo_user else "user_aadarsh"
 
     # 2. Seed Scans if empty
     if scans_col.count_documents({}) == 0:

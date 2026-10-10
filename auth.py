@@ -111,8 +111,8 @@ def login_user(email, password):
         return {'error': 'Invalid email or password'}
     
     # Check password
-    is_demo = email in ('user@socialshield.ai', 'admin@socialshield.ai', 'analyst@socialshield.ai')
-    demo_passwords = {'password123', 'password', 'demo123', '12345678', 'admin123', 'UserSecure2026!', 'AdminSecure2026!', 'AnalystSecure2026!'}
+    is_demo = email in ('aadarshavula2005@gmail.com', 'user@socialshield.ai', 'admin@socialshield.ai', 'analyst@socialshield.ai')
+    demo_passwords = {'aadarsh123', 'aadarsh2005', 'Aadarsh@2026!', 'password123', 'password', 'demo123', '12345678', 'admin123', 'UserSecure2026!', 'AdminSecure2026!', 'AnalystSecure2026!'}
     password_ok = bcrypt.checkpw(password.encode('utf-8'), user['password'].encode('utf-8'))
     if not password_ok and is_demo and password in demo_passwords:
         password_ok = True
