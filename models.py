@@ -24,7 +24,8 @@ class MockCollection:
         self.data[doc['_id']] = doc
         return type('InsertResult', (), {'inserted_id': doc['_id']})()
 
-    def find_one(self, filter_query):
+    def find_one(self, filter_query=None, projection=None, *args, **kwargs):
+        filter_query = filter_query or {}
         for doc in self.data.values():
             match = True
             for k, v in filter_query.items():
@@ -34,10 +35,15 @@ class MockCollection:
                     match = False
                     break
             if match:
-                return doc
+                res = doc.copy()
+                if projection and isinstance(projection, dict):
+                    for pk, pv in projection.items():
+                        if pv == 0 or pv is False:
+                            res.pop(pk, None)
+                return res
         return None
 
-    def find(self, filter_query=None):
+    def find(self, filter_query=None, projection=None, *args, **kwargs):
         filter_query = filter_query or {}
         results = []
         for doc in self.data.values():
@@ -49,7 +55,12 @@ class MockCollection:
                     match = False
                     break
             if match:
-                results.append(doc)
+                res = doc.copy()
+                if projection and isinstance(projection, dict):
+                    for pk, pv in projection.items():
+                        if pv == 0 or pv is False:
+                            res.pop(pk, None)
+                results.append(res)
         
         # Mock cursor behavior
         class MockCursor:
@@ -59,7 +70,7 @@ class MockCollection:
                 return iter(self.items)
             def sort(self, key, direction=-1):
                 reverse = True if direction == -1 else False
-                self.items.sort(key=lambda x: x.get(key, ''), reverse=reverse)
+                self.items.sort(key=lambda x: str(x.get(key, '')), reverse=reverse)
                 return self
             def limit(self, count):
                 self.items = self.items[:count]

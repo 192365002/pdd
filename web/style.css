@@ -351,6 +351,14 @@ h1, h2, h3, h4 {
   position: relative;
   padding: 56px 0 32px;
   overflow: hidden;
+  transition: padding var(--transition-smooth);
+}
+
+.hero-section.compact-telemetry-mode {
+  padding: 16px 0 16px;
+}
+.hero-section.compact-telemetry-mode .metrics-ribbon {
+  margin-top: 0;
 }
 
 .cyber-grid-bg {

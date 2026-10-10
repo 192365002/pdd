@@ -260,6 +260,7 @@ def uploaded_file(filename):
 # ====================================================
 
 @app.route('/health', methods=['GET'])
+@app.route('/api/health', methods=['GET'])
 def health():
     return jsonify({
         'status': 'active',
@@ -538,6 +539,7 @@ def scan_audio():
     user = get_current_user()
     filepath = None
     filename = 'audio_sample.wav'
+    preset = ''
     
     if 'audio' in request.files:
         file = request.files['audio']
@@ -547,17 +549,25 @@ def scan_audio():
             file.save(filepath)
     elif request.is_json:
         data = request.get_json() or {}
+        preset = data.get('preset', '')
+        custom_name = data.get('filename', '')
+        if custom_name:
+            filename = custom_name
         b64 = data.get('audio_base64')
-        if b64:
+        if b64 and len(b64) > 100:
             import base64
-            filename = f"voice_record_{int(time.time())}.wav"
+            custom_name = data.get('filename', f"voice_record_{int(time.time())}.wav")
+            filename = secure_filename(custom_name)
             filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             if ',' in b64:
                 b64 = b64.split(',')[1]
-            with open(filepath, 'wb') as f:
-                f.write(base64.b64decode(b64))
+            try:
+                with open(filepath, 'wb') as f:
+                    f.write(base64.b64decode(b64))
+            except Exception:
+                pass
 
-    result = ai_engine.analyze_audio_voice_clone(filepath, filename)
+    result = ai_engine.analyze_audio_voice_clone(filepath, filename=filename, preset=preset)
     
     db = get_db()
     scan_doc = {
@@ -589,6 +599,7 @@ def scan_video():
     user = get_current_user()
     filepath = None
     filename = 'video_sample.mp4'
+    preset = ''
     
     if 'video' in request.files:
         file = request.files['video']
@@ -596,8 +607,27 @@ def scan_video():
             filename = secure_filename(f"{int(time.time())}_{file.filename}")
             filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             file.save(filepath)
+    elif request.is_json:
+        data = request.get_json() or {}
+        preset = data.get('preset', '')
+        custom_name = data.get('filename', '')
+        if custom_name:
+            filename = custom_name
+        b64 = data.get('video_base64')
+        if b64 and len(b64) > 100:
+            import base64
+            custom_name = data.get('filename', f"video_record_{int(time.time())}.mp4")
+            filename = secure_filename(custom_name)
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            if ',' in b64:
+                b64 = b64.split(',')[1]
+            try:
+                with open(filepath, 'wb') as f:
+                    f.write(base64.b64decode(b64))
+            except Exception:
+                pass
 
-    result = ai_engine.analyze_video_deepfake(filepath)
+    result = ai_engine.analyze_video_deepfake(filepath, filename=filename, preset=preset)
     
     db = get_db()
     scan_doc = {
@@ -709,12 +739,15 @@ def admin_threats():
     
     if request.method == 'GET':
         threats = list(threats_col.find().sort('created_at', -1))
+        clean_threats = []
         for threat in threats:
-            threat['id'] = str(threat['_id'])
-            del threat['_id']
-            if isinstance(threat.get('created_at'), datetime.datetime):
-                threat['created_at'] = threat['created_at'].isoformat()
-        return jsonify({'threats': threats}), 200
+            t = dict(threat)
+            t['id'] = str(t.get('_id', t.get('id', 'threat_item')))
+            t.pop('_id', None)
+            if isinstance(t.get('created_at'), datetime.datetime):
+                t['created_at'] = t['created_at'].isoformat()
+            clean_threats.append(t)
+        return jsonify({'threats': clean_threats}), 200
         
     elif request.method == 'POST':
         data = request.get_json() or {}
@@ -757,12 +790,16 @@ def admin_threats():
 def admin_get_users():
     db = get_db()
     users = list(db['users'].find({}, {'password': 0}))
+    clean_users = []
     for user in users:
-        user['id'] = str(user['_id'])
-        del user['_id']
-        if isinstance(user.get('created_at'), datetime.datetime):
-            user['created_at'] = user['created_at'].isoformat()
-    return jsonify({'users': users}), 200
+        u = dict(user)
+        u['id'] = str(u.get('_id', u.get('id', 'user_item')))
+        u.pop('_id', None)
+        u.pop('password', None)
+        if isinstance(u.get('created_at'), datetime.datetime):
+            u['created_at'] = u['created_at'].isoformat()
+        clean_users.append(u)
+    return jsonify({'users': clean_users}), 200
 
 @app.route('/api/admin/system-health', methods=['GET'])
 def get_system_health():
