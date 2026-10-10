@@ -1,0 +1,295 @@
+name: 🛡️ SocialShield Multi-Modal E2E & Master QA Pipeline
+
+on:
+  push:
+    branches: [ main, master, '**' ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  # ═══════════════════════════════════════════════════════════════════════════
+  # 1. SELENIUM — WEBSITE TESTS (370 CASES)
+  # ═══════════════════════════════════════════════════════════════════════════
+  selenium-tests:
+    name: 🌐 Selenium — Website Tests (300)
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🐍 Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 📦 Install Test Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install openpyxl requests
+
+      - name: 🌐 Run Selenium Web Automation Suite (370+ Tests)
+        run: |
+          echo "===================================================="
+          echo " Running Selenium Web E2E Test Suite"
+          echo "===================================================="
+          python selenium_test/run_tests.py
+
+      - name: 📤 Upload Selenium Test Results Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: selenium-test-results
+          path: |
+            selenium_test/*.xlsx
+          retention-days: 14
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # 2. APPIUM — ANDROID TESTS (500 CASES)
+  # ═══════════════════════════════════════════════════════════════════════════
+  appium-tests:
+    name: 📱 Appium — Android Tests (300)
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🐍 Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 📦 Install Mobile Test Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install openpyxl reportlab
+
+      - name: 📱 Run Appium Mobile Automation Suite (500 Tests)
+        run: |
+          echo "===================================================="
+          echo " Running Appium Mobile E2E Test Suite"
+          echo "===================================================="
+          python appium_test/run_tests.py
+
+      - name: 📤 Upload Appium Test Results Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: appium-test-results
+          path: |
+            appium_test/*.xlsx
+          retention-days: 14
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # 3. UNIT TESTS — API (344 CASES)
+  # ═══════════════════════════════════════════════════════════════════════════
+  unit-tests-api:
+    name: 🔬 Unit Tests — API (300)
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🐍 Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 📦 Install Backend & API Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install openpyxl requests
+
+      - name: 🔬 Run Core Flask Unit & AI Model Tests
+        run: |
+          echo "===================================================="
+          echo " Running Core Flask Backend Unit Tests"
+          echo "===================================================="
+          python -m unittest test_backend.py -v
+
+      - name: 🧪 Run Full 344 API Integration & Classifier Tests
+        run: |
+          echo "===================================================="
+          echo " Running 344 Backend REST API & ML Tests"
+          echo "===================================================="
+          python "backend test/run_tests.py"
+
+      - name: 📤 Upload Backend API Test Results Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-api-test-results
+          path: |
+            backend test/*.xlsx
+          retention-days: 14
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # 4. VALIDATION TESTS (350 CASES)
+  # ═══════════════════════════════════════════════════════════════════════════
+  validation-tests:
+    name: 🧪 Validation Tests (300)
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🐍 Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 📦 Install Security Validation Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install openpyxl requests
+
+      - name: 🧪 Run Security & Vulnerability Validation Suite (350+ Checks)
+        run: |
+          echo "===================================================="
+          echo " Running Vulnerability & Security Validation Suite"
+          echo "===================================================="
+          python vulnerability_test/run_tests.py
+
+      - name: 📤 Upload Validation Test Results Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-test-results
+          path: |
+            vulnerability_test/*.xlsx
+          retention-days: 14
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # 5. DEPLOYMENT STATUS (300 CHECKS)
+  # ═══════════════════════════════════════════════════════════════════════════
+  deployment-status:
+    name: 🚀 Deployment Status (300)
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🐍 Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 📦 Install Deployment Testing Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install openpyxl requests
+
+      - name: 🚀 Run Deployment Status & Infrastructure Suite (300 Checks)
+        run: |
+          echo "===================================================="
+          echo " Running Deployment Status & Infrastructure Checks"
+          echo "===================================================="
+          python deployment_test/run_tests.py
+
+      - name: 📤 Upload Deployment Status Results Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-status-results
+          path: |
+            deployment_test/*.xlsx
+          retention-days: 14
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # 6. LOAD TESTING — PERFORMANCE (350 CASES)
+  # ═══════════════════════════════════════════════════════════════════════════
+  load-testing-performance:
+    name: 📊 Load Testing — Performance (300)
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🐍 Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 📦 Install Load Test Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install openpyxl requests
+
+      - name: 📊 Run API Baseline & Concurrency Load Test (100 VUs / 1m)
+        run: |
+          echo "===================================================="
+          echo " Running API Load Testing & Performance Benchmark"
+          echo "===================================================="
+          python load_test/run_tests.py
+
+      - name: 📤 Upload Load Test Results Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: load-testing-results
+          path: |
+            load_test/*.xlsx
+            load_test/summary.json
+          retention-days: 14
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # 7. COMPILE MASTER REPORT & DEPLOY (AGGREGATOR JOB)
+  # ═══════════════════════════════════════════════════════════════════════════
+  compile-master-report:
+    name: 📊 Compile Master Report & Deploy
+    needs:
+      - selenium-tests
+      - appium-tests
+      - unit-tests-api
+      - validation-tests
+      - deployment-status
+      - load-testing-performance
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🐍 Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 📦 Install Report Compilation Tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install openpyxl
+
+      - name: 🏆 Compile Master QA Summary & Publish Step Summary
+        run: |
+          echo "===================================================="
+          echo " Compiling Grand Total Multi-Modal E2E Master Report"
+          echo "===================================================="
+          python compile_master_report.py
+
+      - name: 📦 Download All Individual Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: all_test_artifacts/
+        continue-on-error: true
+
+      - name: 📤 Upload Consolidated Master Test Suite Bundle
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: SocialShield-Master-E2E-Test-Reports-All-Suites
+          path: |
+            MASTER_TEST_SUMMARY.md
+            selenium_test/*.xlsx
+            appium_test/*.xlsx
+            backend test/*.xlsx
+            vulnerability_test/*.xlsx
+            deployment_test/*.xlsx
+            load_test/*.xlsx
+            load_test/summary.json
+            all_test_artifacts/
+          retention-days: 30

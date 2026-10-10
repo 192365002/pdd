@@ -242,8 +242,16 @@ def save_results_to_excel(results, metadata, filepath, benchmark_summary):
                 cell.font = font_pass
                 cell.fill = fill_pass
                 
-    wb.save(filepath)
-    print(f"\n{Colors.GREEN}{Colors.BOLD}✓ Load Test Results saved to:{Colors.RESET} {filepath}")
+    try:
+        wb.save(filepath)
+        print(f"\n{Colors.GREEN}{Colors.BOLD}✓ Load Test Results saved to:{Colors.RESET} {filepath}")
+    except PermissionError:
+        alt_path = filepath.replace(".xlsx", "_latest.xlsx")
+        try:
+            wb.save(alt_path)
+            print(f"\n{Colors.YELLOW}{Colors.BOLD}⚠ File locked; saved to:{Colors.RESET} {alt_path}")
+        except Exception:
+            pass
 
 def generate_k6_summary_json(benchmark_summary, filepath):
     k6_data = {

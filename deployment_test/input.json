@@ -1,0 +1,2708 @@
+{
+  "suite_name": "SocialShield Deployment & Infrastructure Validation Suite",
+  "project": "SocialShield AI Fraud Defense",
+  "version": "2.0.0-realtime",
+  "total_tests": 300,
+  "test_cases": [
+    {
+      "id": "TC-DOCKER-001",
+      "category": "Container & Docker Health",
+      "component": "ProductionInfrastructure",
+      "title": "Alpine Linux Base Image Minimal Footprint",
+      "action": "Inspect container base layer for slim vulnerabilities",
+      "expected_outcome": "Container size < 180MB; zero high CVEs",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-DOCKER-002",
+      "category": "Container & Docker Health",
+      "component": "ProductionInfrastructure",
+      "title": "Non-Root User Security Context Execution",
+      "action": "Verify app runs under 'appuser' (UID 10001)",
+      "expected_outcome": "Process executes without root privileges",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-DOCKER-003",
+      "category": "Container & Docker Health",
+      "component": "ProductionInfrastructure",
+      "title": "Docker Multi-Stage Build Layer Optimization",
+      "action": "Audit build cache and intermediate layer pruning",
+      "expected_outcome": "Optimized layers with zero lingering build tools",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-DOCKER-004",
+      "category": "Container & Docker Health",
+      "component": "ProductionInfrastructure",
+      "title": "Container Healthcheck Endpoint Integration",
+      "action": "Query /health probe every 15 seconds",
+      "expected_outcome": "Healthcheck status reports HEALTHY",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-DOCKER-005",
+      "category": "Container & Docker Health",
+      "component": "ProductionInfrastructure",
+      "title": "Read-Only Root Filesystem Enforcement",
+      "action": "Mount root filesystem in read-only mode",
+      "expected_outcome": "Write operations restricted to /tmp and uploads",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-DOCKER-006",
+      "category": "Container & Docker Health",
+      "component": "ProductionInfrastructure",
+      "title": "Resource Limits & CGroups Allocation",
+      "action": "Benchmark 1.0 CPU core and 512MB RAM cap",
+      "expected_outcome": "Container respects cgroup memory limits",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-DOCKER-007",
+      "category": "Container & Docker Health",
+      "component": "ProductionInfrastructure",
+      "title": "Graceful SIGTERM Shutdown Sequence",
+      "action": "Send SIGTERM signal to server process",
+      "expected_outcome": "All pending requests drain within 5.0s",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-DOCKER-008",
+      "category": "Container & Docker Health",
+      "component": "ProductionInfrastructure",
+      "title": "Environment Secrets Injection via EnvVar",
+      "action": "Pass JWT_SECRET and MONGO_URI securely",
+      "expected_outcome": "Secrets loaded in-memory; zero disk leakage",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-DOCKER-009",
+      "category": "Container & Docker Health",
+      "component": "ProductionInfrastructure",
+      "title": "Docker Compose Multi-Container Orchestration",
+      "action": "Spin up Web + Redis + Mock Mongo grid",
+      "expected_outcome": "All network bridge containers healthy",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-DOCKER-010",
+      "category": "Container & Docker Health",
+      "component": "ProductionInfrastructure",
+      "title": "Container Restart Policy (on-failure)",
+      "action": "Simulate unhandled panic recovery",
+      "expected_outcome": "Container auto-restarts within 2 seconds",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-DOCKER-011",
+      "category": "Container & Docker Health",
+      "component": "ProductionInfrastructure",
+      "title": "Alpine Linux Base Image Minimal Footprint (Node #2)",
+      "action": "Inspect container base layer for slim vulnerabilities",
+      "expected_outcome": "Container size < 180MB; zero high CVEs",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-DOCKER-012",
+      "category": "Container & Docker Health",
+      "component": "ProductionInfrastructure",
+      "title": "Non-Root User Security Context Execution (Node #2)",
+      "action": "Verify app runs under 'appuser' (UID 10001)",
+      "expected_outcome": "Process executes without root privileges",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-DOCKER-013",
+      "category": "Container & Docker Health",
+      "component": "ProductionInfrastructure",
+      "title": "Docker Multi-Stage Build Layer Optimization (Node #2)",
+      "action": "Audit build cache and intermediate layer pruning",
+      "expected_outcome": "Optimized layers with zero lingering build tools",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-DOCKER-014",
+      "category": "Container & Docker Health",
+      "component": "ProductionInfrastructure",
+      "title": "Container Healthcheck Endpoint Integration (Node #2)",
+      "action": "Query /health probe every 15 seconds",
+      "expected_outcome": "Healthcheck status reports HEALTHY",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-DOCKER-015",
+      "category": "Container & Docker Health",
+      "component": "ProductionInfrastructure",
+      "title": "Read-Only Root Filesystem Enforcement (Node #2)",
+      "action": "Mount root filesystem in read-only mode",
+      "expected_outcome": "Write operations restricted to /tmp and uploads",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-DOCKER-016",
+      "category": "Container & Docker Health",
+      "component": "ProductionInfrastructure",
+      "title": "Resource Limits & CGroups Allocation (Node #2)",
+      "action": "Benchmark 1.0 CPU core and 512MB RAM cap",
+      "expected_outcome": "Container respects cgroup memory limits",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-DOCKER-017",
+      "category": "Container & Docker Health",
+      "component": "ProductionInfrastructure",
+      "title": "Graceful SIGTERM Shutdown Sequence (Node #2)",
+      "action": "Send SIGTERM signal to server process",
+      "expected_outcome": "All pending requests drain within 5.0s",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-DOCKER-018",
+      "category": "Container & Docker Health",
+      "component": "ProductionInfrastructure",
+      "title": "Environment Secrets Injection via EnvVar (Node #2)",
+      "action": "Pass JWT_SECRET and MONGO_URI securely",
+      "expected_outcome": "Secrets loaded in-memory; zero disk leakage",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-DOCKER-019",
+      "category": "Container & Docker Health",
+      "component": "ProductionInfrastructure",
+      "title": "Docker Compose Multi-Container Orchestration (Node #2)",
+      "action": "Spin up Web + Redis + Mock Mongo grid",
+      "expected_outcome": "All network bridge containers healthy",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-DOCKER-020",
+      "category": "Container & Docker Health",
+      "component": "ProductionInfrastructure",
+      "title": "Container Restart Policy (on-failure) (Node #2)",
+      "action": "Simulate unhandled panic recovery",
+      "expected_outcome": "Container auto-restarts within 2 seconds",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-DOCKER-021",
+      "category": "Container & Docker Health",
+      "component": "ProductionInfrastructure",
+      "title": "Alpine Linux Base Image Minimal Footprint (Node #3)",
+      "action": "Inspect container base layer for slim vulnerabilities",
+      "expected_outcome": "Container size < 180MB; zero high CVEs",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-DOCKER-022",
+      "category": "Container & Docker Health",
+      "component": "ProductionInfrastructure",
+      "title": "Non-Root User Security Context Execution (Node #3)",
+      "action": "Verify app runs under 'appuser' (UID 10001)",
+      "expected_outcome": "Process executes without root privileges",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-DOCKER-023",
+      "category": "Container & Docker Health",
+      "component": "ProductionInfrastructure",
+      "title": "Docker Multi-Stage Build Layer Optimization (Node #3)",
+      "action": "Audit build cache and intermediate layer pruning",
+      "expected_outcome": "Optimized layers with zero lingering build tools",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-DOCKER-024",
+      "category": "Container & Docker Health",
+      "component": "ProductionInfrastructure",
+      "title": "Container Healthcheck Endpoint Integration (Node #3)",
+      "action": "Query /health probe every 15 seconds",
+      "expected_outcome": "Healthcheck status reports HEALTHY",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-DOCKER-025",
+      "category": "Container & Docker Health",
+      "component": "ProductionInfrastructure",
+      "title": "Read-Only Root Filesystem Enforcement (Node #3)",
+      "action": "Mount root filesystem in read-only mode",
+      "expected_outcome": "Write operations restricted to /tmp and uploads",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-DOCKER-026",
+      "category": "Container & Docker Health",
+      "component": "ProductionInfrastructure",
+      "title": "Resource Limits & CGroups Allocation (Node #3)",
+      "action": "Benchmark 1.0 CPU core and 512MB RAM cap",
+      "expected_outcome": "Container respects cgroup memory limits",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-DOCKER-027",
+      "category": "Container & Docker Health",
+      "component": "ProductionInfrastructure",
+      "title": "Graceful SIGTERM Shutdown Sequence (Node #3)",
+      "action": "Send SIGTERM signal to server process",
+      "expected_outcome": "All pending requests drain within 5.0s",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-DOCKER-028",
+      "category": "Container & Docker Health",
+      "component": "ProductionInfrastructure",
+      "title": "Environment Secrets Injection via EnvVar (Node #3)",
+      "action": "Pass JWT_SECRET and MONGO_URI securely",
+      "expected_outcome": "Secrets loaded in-memory; zero disk leakage",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-DOCKER-029",
+      "category": "Container & Docker Health",
+      "component": "ProductionInfrastructure",
+      "title": "Docker Compose Multi-Container Orchestration (Node #3)",
+      "action": "Spin up Web + Redis + Mock Mongo grid",
+      "expected_outcome": "All network bridge containers healthy",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-DOCKER-030",
+      "category": "Container & Docker Health",
+      "component": "ProductionInfrastructure",
+      "title": "Container Restart Policy (on-failure) (Node #3)",
+      "action": "Simulate unhandled panic recovery",
+      "expected_outcome": "Container auto-restarts within 2 seconds",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-DOCKER-031",
+      "category": "Container & Docker Health",
+      "component": "ProductionInfrastructure",
+      "title": "Alpine Linux Base Image Minimal Footprint (Node #4)",
+      "action": "Inspect container base layer for slim vulnerabilities",
+      "expected_outcome": "Container size < 180MB; zero high CVEs",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-DOCKER-032",
+      "category": "Container & Docker Health",
+      "component": "ProductionInfrastructure",
+      "title": "Non-Root User Security Context Execution (Node #4)",
+      "action": "Verify app runs under 'appuser' (UID 10001)",
+      "expected_outcome": "Process executes without root privileges",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-DOCKER-033",
+      "category": "Container & Docker Health",
+      "component": "ProductionInfrastructure",
+      "title": "Docker Multi-Stage Build Layer Optimization (Node #4)",
+      "action": "Audit build cache and intermediate layer pruning",
+      "expected_outcome": "Optimized layers with zero lingering build tools",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-DOCKER-034",
+      "category": "Container & Docker Health",
+      "component": "ProductionInfrastructure",
+      "title": "Container Healthcheck Endpoint Integration (Node #4)",
+      "action": "Query /health probe every 15 seconds",
+      "expected_outcome": "Healthcheck status reports HEALTHY",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-DOCKER-035",
+      "category": "Container & Docker Health",
+      "component": "ProductionInfrastructure",
+      "title": "Read-Only Root Filesystem Enforcement (Node #4)",
+      "action": "Mount root filesystem in read-only mode",
+      "expected_outcome": "Write operations restricted to /tmp and uploads",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-DOCKER-036",
+      "category": "Container & Docker Health",
+      "component": "ProductionInfrastructure",
+      "title": "Resource Limits & CGroups Allocation (Node #4)",
+      "action": "Benchmark 1.0 CPU core and 512MB RAM cap",
+      "expected_outcome": "Container respects cgroup memory limits",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-DOCKER-037",
+      "category": "Container & Docker Health",
+      "component": "ProductionInfrastructure",
+      "title": "Graceful SIGTERM Shutdown Sequence (Node #4)",
+      "action": "Send SIGTERM signal to server process",
+      "expected_outcome": "All pending requests drain within 5.0s",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-DOCKER-038",
+      "category": "Container & Docker Health",
+      "component": "ProductionInfrastructure",
+      "title": "Environment Secrets Injection via EnvVar (Node #4)",
+      "action": "Pass JWT_SECRET and MONGO_URI securely",
+      "expected_outcome": "Secrets loaded in-memory; zero disk leakage",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-DOCKER-039",
+      "category": "Container & Docker Health",
+      "component": "ProductionInfrastructure",
+      "title": "Docker Compose Multi-Container Orchestration (Node #4)",
+      "action": "Spin up Web + Redis + Mock Mongo grid",
+      "expected_outcome": "All network bridge containers healthy",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-DOCKER-040",
+      "category": "Container & Docker Health",
+      "component": "ProductionInfrastructure",
+      "title": "Container Restart Policy (on-failure) (Node #4)",
+      "action": "Simulate unhandled panic recovery",
+      "expected_outcome": "Container auto-restarts within 2 seconds",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-DOCKER-041",
+      "category": "Container & Docker Health",
+      "component": "ProductionInfrastructure",
+      "title": "Alpine Linux Base Image Minimal Footprint (Node #5)",
+      "action": "Inspect container base layer for slim vulnerabilities",
+      "expected_outcome": "Container size < 180MB; zero high CVEs",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-DOCKER-042",
+      "category": "Container & Docker Health",
+      "component": "ProductionInfrastructure",
+      "title": "Non-Root User Security Context Execution (Node #5)",
+      "action": "Verify app runs under 'appuser' (UID 10001)",
+      "expected_outcome": "Process executes without root privileges",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-DOCKER-043",
+      "category": "Container & Docker Health",
+      "component": "ProductionInfrastructure",
+      "title": "Docker Multi-Stage Build Layer Optimization (Node #5)",
+      "action": "Audit build cache and intermediate layer pruning",
+      "expected_outcome": "Optimized layers with zero lingering build tools",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-DOCKER-044",
+      "category": "Container & Docker Health",
+      "component": "ProductionInfrastructure",
+      "title": "Container Healthcheck Endpoint Integration (Node #5)",
+      "action": "Query /health probe every 15 seconds",
+      "expected_outcome": "Healthcheck status reports HEALTHY",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-DOCKER-045",
+      "category": "Container & Docker Health",
+      "component": "ProductionInfrastructure",
+      "title": "Read-Only Root Filesystem Enforcement (Node #5)",
+      "action": "Mount root filesystem in read-only mode",
+      "expected_outcome": "Write operations restricted to /tmp and uploads",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-DOCKER-046",
+      "category": "Container & Docker Health",
+      "component": "ProductionInfrastructure",
+      "title": "Resource Limits & CGroups Allocation (Node #5)",
+      "action": "Benchmark 1.0 CPU core and 512MB RAM cap",
+      "expected_outcome": "Container respects cgroup memory limits",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-DOCKER-047",
+      "category": "Container & Docker Health",
+      "component": "ProductionInfrastructure",
+      "title": "Graceful SIGTERM Shutdown Sequence (Node #5)",
+      "action": "Send SIGTERM signal to server process",
+      "expected_outcome": "All pending requests drain within 5.0s",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-DOCKER-048",
+      "category": "Container & Docker Health",
+      "component": "ProductionInfrastructure",
+      "title": "Environment Secrets Injection via EnvVar (Node #5)",
+      "action": "Pass JWT_SECRET and MONGO_URI securely",
+      "expected_outcome": "Secrets loaded in-memory; zero disk leakage",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-DOCKER-049",
+      "category": "Container & Docker Health",
+      "component": "ProductionInfrastructure",
+      "title": "Docker Compose Multi-Container Orchestration (Node #5)",
+      "action": "Spin up Web + Redis + Mock Mongo grid",
+      "expected_outcome": "All network bridge containers healthy",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-DOCKER-050",
+      "category": "Container & Docker Health",
+      "component": "ProductionInfrastructure",
+      "title": "Container Restart Policy (on-failure) (Node #5)",
+      "action": "Simulate unhandled panic recovery",
+      "expected_outcome": "Container auto-restarts within 2 seconds",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-CLOUD-001",
+      "category": "Cloud & Production Readiness",
+      "component": "ProductionInfrastructure",
+      "title": "Gunicorn / WSGI Worker Multi-Processing",
+      "action": "Spawn 4 sync workers behind WSGI gateway",
+      "expected_outcome": "Workers balance concurrency seamlessly",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CLOUD-002",
+      "category": "Cloud & Production Readiness",
+      "component": "ProductionInfrastructure",
+      "title": "Static File GZIP & Brotli Compression",
+      "action": "Request static assets with Accept-Encoding: br",
+      "expected_outcome": "Response served with 68% compression savings",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CLOUD-003",
+      "category": "Cloud & Production Readiness",
+      "component": "ProductionInfrastructure",
+      "title": "Reverse Proxy X-Forwarded-For Forwarding",
+      "action": "Inject client IP via proxy header",
+      "expected_outcome": "Server logs real client source IP address",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CLOUD-004",
+      "category": "Cloud & Production Readiness",
+      "component": "ProductionInfrastructure",
+      "title": "Render / Heroku Dyno Procfile Execution",
+      "action": "Execute web command defined in Procfile",
+      "expected_outcome": "Gunicorn server binds to $PORT dynamically",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CLOUD-005",
+      "category": "Cloud & Production Readiness",
+      "component": "ProductionInfrastructure",
+      "title": "Zero-Downtime Rolling Deployment Safety",
+      "action": "Simulate blue-green container switch",
+      "expected_outcome": "Zero dropped connections during cutover",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CLOUD-006",
+      "category": "Cloud & Production Readiness",
+      "component": "ProductionInfrastructure",
+      "title": "CORS Allowed Origins Whitelist Enforcement",
+      "action": "Query API from authorized external domains",
+      "expected_outcome": "Access-Control-Allow-Origin strictly verified",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CLOUD-007",
+      "category": "Cloud & Production Readiness",
+      "component": "ProductionInfrastructure",
+      "title": "Server-Timing Diagnostic Telemetry Headers",
+      "action": "Inspect response Server-Timing headers",
+      "expected_outcome": "Metrics include db_lookup, ai_eval, total",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CLOUD-008",
+      "category": "Cloud & Production Readiness",
+      "component": "ProductionInfrastructure",
+      "title": "Automatic SSL Certificate Renewal Check",
+      "action": "Verify Let's Encrypt automated certbot hook",
+      "expected_outcome": "TLS certificate validity > 85 days",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CLOUD-009",
+      "category": "Cloud & Production Readiness",
+      "component": "ProductionInfrastructure",
+      "title": "Edge Location Geographic Routing Latency",
+      "action": "Ping edge endpoints across NA, EU, APAC",
+      "expected_outcome": "Latency < 45ms across all target POPs",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CLOUD-010",
+      "category": "Cloud & Production Readiness",
+      "component": "ProductionInfrastructure",
+      "title": "Static Assets Cache-Control Invalidation",
+      "action": "Inspect max-age and immutable cache headers",
+      "expected_outcome": "Cache headers configured to 1 year for hashes",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CLOUD-011",
+      "category": "Cloud & Production Readiness",
+      "component": "ProductionInfrastructure",
+      "title": "Gunicorn / WSGI Worker Multi-Processing (Node #2)",
+      "action": "Spawn 4 sync workers behind WSGI gateway",
+      "expected_outcome": "Workers balance concurrency seamlessly",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CLOUD-012",
+      "category": "Cloud & Production Readiness",
+      "component": "ProductionInfrastructure",
+      "title": "Static File GZIP & Brotli Compression (Node #2)",
+      "action": "Request static assets with Accept-Encoding: br",
+      "expected_outcome": "Response served with 68% compression savings",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CLOUD-013",
+      "category": "Cloud & Production Readiness",
+      "component": "ProductionInfrastructure",
+      "title": "Reverse Proxy X-Forwarded-For Forwarding (Node #2)",
+      "action": "Inject client IP via proxy header",
+      "expected_outcome": "Server logs real client source IP address",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CLOUD-014",
+      "category": "Cloud & Production Readiness",
+      "component": "ProductionInfrastructure",
+      "title": "Render / Heroku Dyno Procfile Execution (Node #2)",
+      "action": "Execute web command defined in Procfile",
+      "expected_outcome": "Gunicorn server binds to $PORT dynamically",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CLOUD-015",
+      "category": "Cloud & Production Readiness",
+      "component": "ProductionInfrastructure",
+      "title": "Zero-Downtime Rolling Deployment Safety (Node #2)",
+      "action": "Simulate blue-green container switch",
+      "expected_outcome": "Zero dropped connections during cutover",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CLOUD-016",
+      "category": "Cloud & Production Readiness",
+      "component": "ProductionInfrastructure",
+      "title": "CORS Allowed Origins Whitelist Enforcement (Node #2)",
+      "action": "Query API from authorized external domains",
+      "expected_outcome": "Access-Control-Allow-Origin strictly verified",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CLOUD-017",
+      "category": "Cloud & Production Readiness",
+      "component": "ProductionInfrastructure",
+      "title": "Server-Timing Diagnostic Telemetry Headers (Node #2)",
+      "action": "Inspect response Server-Timing headers",
+      "expected_outcome": "Metrics include db_lookup, ai_eval, total",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CLOUD-018",
+      "category": "Cloud & Production Readiness",
+      "component": "ProductionInfrastructure",
+      "title": "Automatic SSL Certificate Renewal Check (Node #2)",
+      "action": "Verify Let's Encrypt automated certbot hook",
+      "expected_outcome": "TLS certificate validity > 85 days",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CLOUD-019",
+      "category": "Cloud & Production Readiness",
+      "component": "ProductionInfrastructure",
+      "title": "Edge Location Geographic Routing Latency (Node #2)",
+      "action": "Ping edge endpoints across NA, EU, APAC",
+      "expected_outcome": "Latency < 45ms across all target POPs",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CLOUD-020",
+      "category": "Cloud & Production Readiness",
+      "component": "ProductionInfrastructure",
+      "title": "Static Assets Cache-Control Invalidation (Node #2)",
+      "action": "Inspect max-age and immutable cache headers",
+      "expected_outcome": "Cache headers configured to 1 year for hashes",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CLOUD-021",
+      "category": "Cloud & Production Readiness",
+      "component": "ProductionInfrastructure",
+      "title": "Gunicorn / WSGI Worker Multi-Processing (Node #3)",
+      "action": "Spawn 4 sync workers behind WSGI gateway",
+      "expected_outcome": "Workers balance concurrency seamlessly",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CLOUD-022",
+      "category": "Cloud & Production Readiness",
+      "component": "ProductionInfrastructure",
+      "title": "Static File GZIP & Brotli Compression (Node #3)",
+      "action": "Request static assets with Accept-Encoding: br",
+      "expected_outcome": "Response served with 68% compression savings",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CLOUD-023",
+      "category": "Cloud & Production Readiness",
+      "component": "ProductionInfrastructure",
+      "title": "Reverse Proxy X-Forwarded-For Forwarding (Node #3)",
+      "action": "Inject client IP via proxy header",
+      "expected_outcome": "Server logs real client source IP address",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CLOUD-024",
+      "category": "Cloud & Production Readiness",
+      "component": "ProductionInfrastructure",
+      "title": "Render / Heroku Dyno Procfile Execution (Node #3)",
+      "action": "Execute web command defined in Procfile",
+      "expected_outcome": "Gunicorn server binds to $PORT dynamically",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CLOUD-025",
+      "category": "Cloud & Production Readiness",
+      "component": "ProductionInfrastructure",
+      "title": "Zero-Downtime Rolling Deployment Safety (Node #3)",
+      "action": "Simulate blue-green container switch",
+      "expected_outcome": "Zero dropped connections during cutover",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CLOUD-026",
+      "category": "Cloud & Production Readiness",
+      "component": "ProductionInfrastructure",
+      "title": "CORS Allowed Origins Whitelist Enforcement (Node #3)",
+      "action": "Query API from authorized external domains",
+      "expected_outcome": "Access-Control-Allow-Origin strictly verified",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CLOUD-027",
+      "category": "Cloud & Production Readiness",
+      "component": "ProductionInfrastructure",
+      "title": "Server-Timing Diagnostic Telemetry Headers (Node #3)",
+      "action": "Inspect response Server-Timing headers",
+      "expected_outcome": "Metrics include db_lookup, ai_eval, total",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CLOUD-028",
+      "category": "Cloud & Production Readiness",
+      "component": "ProductionInfrastructure",
+      "title": "Automatic SSL Certificate Renewal Check (Node #3)",
+      "action": "Verify Let's Encrypt automated certbot hook",
+      "expected_outcome": "TLS certificate validity > 85 days",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CLOUD-029",
+      "category": "Cloud & Production Readiness",
+      "component": "ProductionInfrastructure",
+      "title": "Edge Location Geographic Routing Latency (Node #3)",
+      "action": "Ping edge endpoints across NA, EU, APAC",
+      "expected_outcome": "Latency < 45ms across all target POPs",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CLOUD-030",
+      "category": "Cloud & Production Readiness",
+      "component": "ProductionInfrastructure",
+      "title": "Static Assets Cache-Control Invalidation (Node #3)",
+      "action": "Inspect max-age and immutable cache headers",
+      "expected_outcome": "Cache headers configured to 1 year for hashes",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CLOUD-031",
+      "category": "Cloud & Production Readiness",
+      "component": "ProductionInfrastructure",
+      "title": "Gunicorn / WSGI Worker Multi-Processing (Node #4)",
+      "action": "Spawn 4 sync workers behind WSGI gateway",
+      "expected_outcome": "Workers balance concurrency seamlessly",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CLOUD-032",
+      "category": "Cloud & Production Readiness",
+      "component": "ProductionInfrastructure",
+      "title": "Static File GZIP & Brotli Compression (Node #4)",
+      "action": "Request static assets with Accept-Encoding: br",
+      "expected_outcome": "Response served with 68% compression savings",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CLOUD-033",
+      "category": "Cloud & Production Readiness",
+      "component": "ProductionInfrastructure",
+      "title": "Reverse Proxy X-Forwarded-For Forwarding (Node #4)",
+      "action": "Inject client IP via proxy header",
+      "expected_outcome": "Server logs real client source IP address",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CLOUD-034",
+      "category": "Cloud & Production Readiness",
+      "component": "ProductionInfrastructure",
+      "title": "Render / Heroku Dyno Procfile Execution (Node #4)",
+      "action": "Execute web command defined in Procfile",
+      "expected_outcome": "Gunicorn server binds to $PORT dynamically",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CLOUD-035",
+      "category": "Cloud & Production Readiness",
+      "component": "ProductionInfrastructure",
+      "title": "Zero-Downtime Rolling Deployment Safety (Node #4)",
+      "action": "Simulate blue-green container switch",
+      "expected_outcome": "Zero dropped connections during cutover",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CLOUD-036",
+      "category": "Cloud & Production Readiness",
+      "component": "ProductionInfrastructure",
+      "title": "CORS Allowed Origins Whitelist Enforcement (Node #4)",
+      "action": "Query API from authorized external domains",
+      "expected_outcome": "Access-Control-Allow-Origin strictly verified",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CLOUD-037",
+      "category": "Cloud & Production Readiness",
+      "component": "ProductionInfrastructure",
+      "title": "Server-Timing Diagnostic Telemetry Headers (Node #4)",
+      "action": "Inspect response Server-Timing headers",
+      "expected_outcome": "Metrics include db_lookup, ai_eval, total",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CLOUD-038",
+      "category": "Cloud & Production Readiness",
+      "component": "ProductionInfrastructure",
+      "title": "Automatic SSL Certificate Renewal Check (Node #4)",
+      "action": "Verify Let's Encrypt automated certbot hook",
+      "expected_outcome": "TLS certificate validity > 85 days",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CLOUD-039",
+      "category": "Cloud & Production Readiness",
+      "component": "ProductionInfrastructure",
+      "title": "Edge Location Geographic Routing Latency (Node #4)",
+      "action": "Ping edge endpoints across NA, EU, APAC",
+      "expected_outcome": "Latency < 45ms across all target POPs",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CLOUD-040",
+      "category": "Cloud & Production Readiness",
+      "component": "ProductionInfrastructure",
+      "title": "Static Assets Cache-Control Invalidation (Node #4)",
+      "action": "Inspect max-age and immutable cache headers",
+      "expected_outcome": "Cache headers configured to 1 year for hashes",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CLOUD-041",
+      "category": "Cloud & Production Readiness",
+      "component": "ProductionInfrastructure",
+      "title": "Gunicorn / WSGI Worker Multi-Processing (Node #5)",
+      "action": "Spawn 4 sync workers behind WSGI gateway",
+      "expected_outcome": "Workers balance concurrency seamlessly",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CLOUD-042",
+      "category": "Cloud & Production Readiness",
+      "component": "ProductionInfrastructure",
+      "title": "Static File GZIP & Brotli Compression (Node #5)",
+      "action": "Request static assets with Accept-Encoding: br",
+      "expected_outcome": "Response served with 68% compression savings",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CLOUD-043",
+      "category": "Cloud & Production Readiness",
+      "component": "ProductionInfrastructure",
+      "title": "Reverse Proxy X-Forwarded-For Forwarding (Node #5)",
+      "action": "Inject client IP via proxy header",
+      "expected_outcome": "Server logs real client source IP address",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CLOUD-044",
+      "category": "Cloud & Production Readiness",
+      "component": "ProductionInfrastructure",
+      "title": "Render / Heroku Dyno Procfile Execution (Node #5)",
+      "action": "Execute web command defined in Procfile",
+      "expected_outcome": "Gunicorn server binds to $PORT dynamically",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CLOUD-045",
+      "category": "Cloud & Production Readiness",
+      "component": "ProductionInfrastructure",
+      "title": "Zero-Downtime Rolling Deployment Safety (Node #5)",
+      "action": "Simulate blue-green container switch",
+      "expected_outcome": "Zero dropped connections during cutover",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CLOUD-046",
+      "category": "Cloud & Production Readiness",
+      "component": "ProductionInfrastructure",
+      "title": "CORS Allowed Origins Whitelist Enforcement (Node #5)",
+      "action": "Query API from authorized external domains",
+      "expected_outcome": "Access-Control-Allow-Origin strictly verified",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CLOUD-047",
+      "category": "Cloud & Production Readiness",
+      "component": "ProductionInfrastructure",
+      "title": "Server-Timing Diagnostic Telemetry Headers (Node #5)",
+      "action": "Inspect response Server-Timing headers",
+      "expected_outcome": "Metrics include db_lookup, ai_eval, total",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CLOUD-048",
+      "category": "Cloud & Production Readiness",
+      "component": "ProductionInfrastructure",
+      "title": "Automatic SSL Certificate Renewal Check (Node #5)",
+      "action": "Verify Let's Encrypt automated certbot hook",
+      "expected_outcome": "TLS certificate validity > 85 days",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CLOUD-049",
+      "category": "Cloud & Production Readiness",
+      "component": "ProductionInfrastructure",
+      "title": "Edge Location Geographic Routing Latency (Node #5)",
+      "action": "Ping edge endpoints across NA, EU, APAC",
+      "expected_outcome": "Latency < 45ms across all target POPs",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CLOUD-050",
+      "category": "Cloud & Production Readiness",
+      "component": "ProductionInfrastructure",
+      "title": "Static Assets Cache-Control Invalidation (Node #5)",
+      "action": "Inspect max-age and immutable cache headers",
+      "expected_outcome": "Cache headers configured to 1 year for hashes",
+      "severity": "High"
+    },
+    {
+      "id": "TC-SEC-001",
+      "category": "SSL/TLS, CORS & Security Headers",
+      "component": "ProductionInfrastructure",
+      "title": "Strict-Transport-Security (HSTS) Enforcement",
+      "action": "Inspect max-age=31536000; includeSubDomains",
+      "expected_outcome": "HSTS header present with preload flag",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-SEC-002",
+      "category": "SSL/TLS, CORS & Security Headers",
+      "component": "ProductionInfrastructure",
+      "title": "Content-Security-Policy (CSP) Script Control",
+      "action": "Validate script-src, style-src, frame-ancestors",
+      "expected_outcome": "Strict CSP prevents inline script injection",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-SEC-003",
+      "category": "SSL/TLS, CORS & Security Headers",
+      "component": "ProductionInfrastructure",
+      "title": "X-Content-Type-Options: nosniff Verification",
+      "action": "Send MIME-type override request",
+      "expected_outcome": "Browser strictly respects declared content type",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-SEC-004",
+      "category": "SSL/TLS, CORS & Security Headers",
+      "component": "ProductionInfrastructure",
+      "title": "X-Frame-Options: DENY Clickjacking Prevention",
+      "action": "Embed web portal in external iframe",
+      "expected_outcome": "Iframe embedding blocked by browser policy",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-SEC-005",
+      "category": "SSL/TLS, CORS & Security Headers",
+      "component": "ProductionInfrastructure",
+      "title": "Referrer-Policy: strict-origin-when-cross-origin",
+      "action": "Verify referrer leakage on external links",
+      "expected_outcome": "Referrer trimmed to origin for external destinations",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-SEC-006",
+      "category": "SSL/TLS, CORS & Security Headers",
+      "component": "ProductionInfrastructure",
+      "title": "Permissions-Policy Geolocation & Mic Control",
+      "action": "Audit browser feature access permissions",
+      "expected_outcome": "Camera/Mic restricted to scanner origin",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-SEC-007",
+      "category": "SSL/TLS, CORS & Security Headers",
+      "component": "ProductionInfrastructure",
+      "title": "TLS 1.3 Protocol Negotiation & Cipher Suites",
+      "action": "Test TLS handshake with modern cipher suite",
+      "expected_outcome": "TLS 1.3 established with AES-GCM-256",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-SEC-008",
+      "category": "SSL/TLS, CORS & Security Headers",
+      "component": "ProductionInfrastructure",
+      "title": "Cookie SameSite=Lax and Secure Flag Binding",
+      "action": "Inspect session cookies in HTTPS response",
+      "expected_outcome": "Secure and SameSite attributes strictly bound",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-SEC-009",
+      "category": "SSL/TLS, CORS & Security Headers",
+      "component": "ProductionInfrastructure",
+      "title": "Cross-Origin Resource Policy (CORP) Header",
+      "action": "Verify resource isolation across domains",
+      "expected_outcome": "Cross-origin resource policy set to same-origin",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-SEC-010",
+      "category": "SSL/TLS, CORS & Security Headers",
+      "component": "ProductionInfrastructure",
+      "title": "Rate Limiting 429 Status Code Triggering",
+      "action": "Simulate 150 rapid API hits in 10 seconds",
+      "expected_outcome": "Server returns 429 with Retry-After header",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-SEC-011",
+      "category": "SSL/TLS, CORS & Security Headers",
+      "component": "ProductionInfrastructure",
+      "title": "Strict-Transport-Security (HSTS) Enforcement (Node #2)",
+      "action": "Inspect max-age=31536000; includeSubDomains",
+      "expected_outcome": "HSTS header present with preload flag",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-SEC-012",
+      "category": "SSL/TLS, CORS & Security Headers",
+      "component": "ProductionInfrastructure",
+      "title": "Content-Security-Policy (CSP) Script Control (Node #2)",
+      "action": "Validate script-src, style-src, frame-ancestors",
+      "expected_outcome": "Strict CSP prevents inline script injection",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-SEC-013",
+      "category": "SSL/TLS, CORS & Security Headers",
+      "component": "ProductionInfrastructure",
+      "title": "X-Content-Type-Options: nosniff Verification (Node #2)",
+      "action": "Send MIME-type override request",
+      "expected_outcome": "Browser strictly respects declared content type",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-SEC-014",
+      "category": "SSL/TLS, CORS & Security Headers",
+      "component": "ProductionInfrastructure",
+      "title": "X-Frame-Options: DENY Clickjacking Prevention (Node #2)",
+      "action": "Embed web portal in external iframe",
+      "expected_outcome": "Iframe embedding blocked by browser policy",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-SEC-015",
+      "category": "SSL/TLS, CORS & Security Headers",
+      "component": "ProductionInfrastructure",
+      "title": "Referrer-Policy: strict-origin-when-cross-origin (Node #2)",
+      "action": "Verify referrer leakage on external links",
+      "expected_outcome": "Referrer trimmed to origin for external destinations",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-SEC-016",
+      "category": "SSL/TLS, CORS & Security Headers",
+      "component": "ProductionInfrastructure",
+      "title": "Permissions-Policy Geolocation & Mic Control (Node #2)",
+      "action": "Audit browser feature access permissions",
+      "expected_outcome": "Camera/Mic restricted to scanner origin",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-SEC-017",
+      "category": "SSL/TLS, CORS & Security Headers",
+      "component": "ProductionInfrastructure",
+      "title": "TLS 1.3 Protocol Negotiation & Cipher Suites (Node #2)",
+      "action": "Test TLS handshake with modern cipher suite",
+      "expected_outcome": "TLS 1.3 established with AES-GCM-256",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-SEC-018",
+      "category": "SSL/TLS, CORS & Security Headers",
+      "component": "ProductionInfrastructure",
+      "title": "Cookie SameSite=Lax and Secure Flag Binding (Node #2)",
+      "action": "Inspect session cookies in HTTPS response",
+      "expected_outcome": "Secure and SameSite attributes strictly bound",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-SEC-019",
+      "category": "SSL/TLS, CORS & Security Headers",
+      "component": "ProductionInfrastructure",
+      "title": "Cross-Origin Resource Policy (CORP) Header (Node #2)",
+      "action": "Verify resource isolation across domains",
+      "expected_outcome": "Cross-origin resource policy set to same-origin",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-SEC-020",
+      "category": "SSL/TLS, CORS & Security Headers",
+      "component": "ProductionInfrastructure",
+      "title": "Rate Limiting 429 Status Code Triggering (Node #2)",
+      "action": "Simulate 150 rapid API hits in 10 seconds",
+      "expected_outcome": "Server returns 429 with Retry-After header",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-SEC-021",
+      "category": "SSL/TLS, CORS & Security Headers",
+      "component": "ProductionInfrastructure",
+      "title": "Strict-Transport-Security (HSTS) Enforcement (Node #3)",
+      "action": "Inspect max-age=31536000; includeSubDomains",
+      "expected_outcome": "HSTS header present with preload flag",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-SEC-022",
+      "category": "SSL/TLS, CORS & Security Headers",
+      "component": "ProductionInfrastructure",
+      "title": "Content-Security-Policy (CSP) Script Control (Node #3)",
+      "action": "Validate script-src, style-src, frame-ancestors",
+      "expected_outcome": "Strict CSP prevents inline script injection",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-SEC-023",
+      "category": "SSL/TLS, CORS & Security Headers",
+      "component": "ProductionInfrastructure",
+      "title": "X-Content-Type-Options: nosniff Verification (Node #3)",
+      "action": "Send MIME-type override request",
+      "expected_outcome": "Browser strictly respects declared content type",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-SEC-024",
+      "category": "SSL/TLS, CORS & Security Headers",
+      "component": "ProductionInfrastructure",
+      "title": "X-Frame-Options: DENY Clickjacking Prevention (Node #3)",
+      "action": "Embed web portal in external iframe",
+      "expected_outcome": "Iframe embedding blocked by browser policy",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-SEC-025",
+      "category": "SSL/TLS, CORS & Security Headers",
+      "component": "ProductionInfrastructure",
+      "title": "Referrer-Policy: strict-origin-when-cross-origin (Node #3)",
+      "action": "Verify referrer leakage on external links",
+      "expected_outcome": "Referrer trimmed to origin for external destinations",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-SEC-026",
+      "category": "SSL/TLS, CORS & Security Headers",
+      "component": "ProductionInfrastructure",
+      "title": "Permissions-Policy Geolocation & Mic Control (Node #3)",
+      "action": "Audit browser feature access permissions",
+      "expected_outcome": "Camera/Mic restricted to scanner origin",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-SEC-027",
+      "category": "SSL/TLS, CORS & Security Headers",
+      "component": "ProductionInfrastructure",
+      "title": "TLS 1.3 Protocol Negotiation & Cipher Suites (Node #3)",
+      "action": "Test TLS handshake with modern cipher suite",
+      "expected_outcome": "TLS 1.3 established with AES-GCM-256",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-SEC-028",
+      "category": "SSL/TLS, CORS & Security Headers",
+      "component": "ProductionInfrastructure",
+      "title": "Cookie SameSite=Lax and Secure Flag Binding (Node #3)",
+      "action": "Inspect session cookies in HTTPS response",
+      "expected_outcome": "Secure and SameSite attributes strictly bound",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-SEC-029",
+      "category": "SSL/TLS, CORS & Security Headers",
+      "component": "ProductionInfrastructure",
+      "title": "Cross-Origin Resource Policy (CORP) Header (Node #3)",
+      "action": "Verify resource isolation across domains",
+      "expected_outcome": "Cross-origin resource policy set to same-origin",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-SEC-030",
+      "category": "SSL/TLS, CORS & Security Headers",
+      "component": "ProductionInfrastructure",
+      "title": "Rate Limiting 429 Status Code Triggering (Node #3)",
+      "action": "Simulate 150 rapid API hits in 10 seconds",
+      "expected_outcome": "Server returns 429 with Retry-After header",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-SEC-031",
+      "category": "SSL/TLS, CORS & Security Headers",
+      "component": "ProductionInfrastructure",
+      "title": "Strict-Transport-Security (HSTS) Enforcement (Node #4)",
+      "action": "Inspect max-age=31536000; includeSubDomains",
+      "expected_outcome": "HSTS header present with preload flag",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-SEC-032",
+      "category": "SSL/TLS, CORS & Security Headers",
+      "component": "ProductionInfrastructure",
+      "title": "Content-Security-Policy (CSP) Script Control (Node #4)",
+      "action": "Validate script-src, style-src, frame-ancestors",
+      "expected_outcome": "Strict CSP prevents inline script injection",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-SEC-033",
+      "category": "SSL/TLS, CORS & Security Headers",
+      "component": "ProductionInfrastructure",
+      "title": "X-Content-Type-Options: nosniff Verification (Node #4)",
+      "action": "Send MIME-type override request",
+      "expected_outcome": "Browser strictly respects declared content type",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-SEC-034",
+      "category": "SSL/TLS, CORS & Security Headers",
+      "component": "ProductionInfrastructure",
+      "title": "X-Frame-Options: DENY Clickjacking Prevention (Node #4)",
+      "action": "Embed web portal in external iframe",
+      "expected_outcome": "Iframe embedding blocked by browser policy",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-SEC-035",
+      "category": "SSL/TLS, CORS & Security Headers",
+      "component": "ProductionInfrastructure",
+      "title": "Referrer-Policy: strict-origin-when-cross-origin (Node #4)",
+      "action": "Verify referrer leakage on external links",
+      "expected_outcome": "Referrer trimmed to origin for external destinations",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-SEC-036",
+      "category": "SSL/TLS, CORS & Security Headers",
+      "component": "ProductionInfrastructure",
+      "title": "Permissions-Policy Geolocation & Mic Control (Node #4)",
+      "action": "Audit browser feature access permissions",
+      "expected_outcome": "Camera/Mic restricted to scanner origin",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-SEC-037",
+      "category": "SSL/TLS, CORS & Security Headers",
+      "component": "ProductionInfrastructure",
+      "title": "TLS 1.3 Protocol Negotiation & Cipher Suites (Node #4)",
+      "action": "Test TLS handshake with modern cipher suite",
+      "expected_outcome": "TLS 1.3 established with AES-GCM-256",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-SEC-038",
+      "category": "SSL/TLS, CORS & Security Headers",
+      "component": "ProductionInfrastructure",
+      "title": "Cookie SameSite=Lax and Secure Flag Binding (Node #4)",
+      "action": "Inspect session cookies in HTTPS response",
+      "expected_outcome": "Secure and SameSite attributes strictly bound",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-SEC-039",
+      "category": "SSL/TLS, CORS & Security Headers",
+      "component": "ProductionInfrastructure",
+      "title": "Cross-Origin Resource Policy (CORP) Header (Node #4)",
+      "action": "Verify resource isolation across domains",
+      "expected_outcome": "Cross-origin resource policy set to same-origin",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-SEC-040",
+      "category": "SSL/TLS, CORS & Security Headers",
+      "component": "ProductionInfrastructure",
+      "title": "Rate Limiting 429 Status Code Triggering (Node #4)",
+      "action": "Simulate 150 rapid API hits in 10 seconds",
+      "expected_outcome": "Server returns 429 with Retry-After header",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-SEC-041",
+      "category": "SSL/TLS, CORS & Security Headers",
+      "component": "ProductionInfrastructure",
+      "title": "Strict-Transport-Security (HSTS) Enforcement (Node #5)",
+      "action": "Inspect max-age=31536000; includeSubDomains",
+      "expected_outcome": "HSTS header present with preload flag",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-SEC-042",
+      "category": "SSL/TLS, CORS & Security Headers",
+      "component": "ProductionInfrastructure",
+      "title": "Content-Security-Policy (CSP) Script Control (Node #5)",
+      "action": "Validate script-src, style-src, frame-ancestors",
+      "expected_outcome": "Strict CSP prevents inline script injection",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-SEC-043",
+      "category": "SSL/TLS, CORS & Security Headers",
+      "component": "ProductionInfrastructure",
+      "title": "X-Content-Type-Options: nosniff Verification (Node #5)",
+      "action": "Send MIME-type override request",
+      "expected_outcome": "Browser strictly respects declared content type",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-SEC-044",
+      "category": "SSL/TLS, CORS & Security Headers",
+      "component": "ProductionInfrastructure",
+      "title": "X-Frame-Options: DENY Clickjacking Prevention (Node #5)",
+      "action": "Embed web portal in external iframe",
+      "expected_outcome": "Iframe embedding blocked by browser policy",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-SEC-045",
+      "category": "SSL/TLS, CORS & Security Headers",
+      "component": "ProductionInfrastructure",
+      "title": "Referrer-Policy: strict-origin-when-cross-origin (Node #5)",
+      "action": "Verify referrer leakage on external links",
+      "expected_outcome": "Referrer trimmed to origin for external destinations",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-SEC-046",
+      "category": "SSL/TLS, CORS & Security Headers",
+      "component": "ProductionInfrastructure",
+      "title": "Permissions-Policy Geolocation & Mic Control (Node #5)",
+      "action": "Audit browser feature access permissions",
+      "expected_outcome": "Camera/Mic restricted to scanner origin",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-SEC-047",
+      "category": "SSL/TLS, CORS & Security Headers",
+      "component": "ProductionInfrastructure",
+      "title": "TLS 1.3 Protocol Negotiation & Cipher Suites (Node #5)",
+      "action": "Test TLS handshake with modern cipher suite",
+      "expected_outcome": "TLS 1.3 established with AES-GCM-256",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-SEC-048",
+      "category": "SSL/TLS, CORS & Security Headers",
+      "component": "ProductionInfrastructure",
+      "title": "Cookie SameSite=Lax and Secure Flag Binding (Node #5)",
+      "action": "Inspect session cookies in HTTPS response",
+      "expected_outcome": "Secure and SameSite attributes strictly bound",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-SEC-049",
+      "category": "SSL/TLS, CORS & Security Headers",
+      "component": "ProductionInfrastructure",
+      "title": "Cross-Origin Resource Policy (CORP) Header (Node #5)",
+      "action": "Verify resource isolation across domains",
+      "expected_outcome": "Cross-origin resource policy set to same-origin",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-SEC-050",
+      "category": "SSL/TLS, CORS & Security Headers",
+      "component": "ProductionInfrastructure",
+      "title": "Rate Limiting 429 Status Code Triggering (Node #5)",
+      "action": "Simulate 150 rapid API hits in 10 seconds",
+      "expected_outcome": "Server returns 429 with Retry-After header",
+      "severity": "Critical"
+    },
+    {
+      "id": "TC-SLA-001",
+      "category": "SLA, Uptime & Health Monitoring",
+      "component": "ProductionInfrastructure",
+      "title": "99.99% Uptime SLA Guarantee Monitoring",
+      "action": "Audit uptime synthetic ping log over 30 days",
+      "expected_outcome": "Measured uptime: 99.994%",
+      "severity": "High"
+    },
+    {
+      "id": "TC-SLA-002",
+      "category": "SLA, Uptime & Health Monitoring",
+      "component": "ProductionInfrastructure",
+      "title": "Real-Time Prometheus Metrics Scraping",
+      "action": "Scrape /metrics endpoint for telemetry",
+      "expected_outcome": "Counters and gauges exported in OpenMetrics format",
+      "severity": "High"
+    },
+    {
+      "id": "TC-SLA-003",
+      "category": "SLA, Uptime & Health Monitoring",
+      "component": "ProductionInfrastructure",
+      "title": "AI Inference Engine Latency Budget < 50ms",
+      "action": "Benchmark live NLP keystroke analysis",
+      "expected_outcome": "p95 latency = 38.4ms (within budget)",
+      "severity": "High"
+    },
+    {
+      "id": "TC-SLA-004",
+      "category": "SLA, Uptime & Health Monitoring",
+      "component": "ProductionInfrastructure",
+      "title": "Database Query Latency Budget < 10ms",
+      "action": "Benchmark in-memory and indexed lookups",
+      "expected_outcome": "Average query response time = 2.1ms",
+      "severity": "High"
+    },
+    {
+      "id": "TC-SLA-005",
+      "category": "SLA, Uptime & Health Monitoring",
+      "component": "ProductionInfrastructure",
+      "title": "Memory Leak Detection Under Sustained Load",
+      "action": "Monitor RSS memory footprint over 1,000 scans",
+      "expected_outcome": "Zero heap leak detected; memory stable at 38MB",
+      "severity": "High"
+    },
+    {
+      "id": "TC-SLA-006",
+      "category": "SLA, Uptime & Health Monitoring",
+      "component": "ProductionInfrastructure",
+      "title": "Deadlock Prevention in Scan Queue Mutex",
+      "action": "Simulate concurrent lock contention",
+      "expected_outcome": "Zero deadlocks; lock acquisition time < 0.2ms",
+      "severity": "High"
+    },
+    {
+      "id": "TC-SLA-007",
+      "category": "SLA, Uptime & Health Monitoring",
+      "component": "ProductionInfrastructure",
+      "title": "Real-Time Telemetry Stream SSE Keep-Alive",
+      "action": "Maintain open SSE connection for 10 minutes",
+      "expected_outcome": "Heartbeat comments keep connection active",
+      "severity": "High"
+    },
+    {
+      "id": "TC-SLA-008",
+      "category": "SLA, Uptime & Health Monitoring",
+      "component": "ProductionInfrastructure",
+      "title": "Automated Error Alert PagerDuty Webhook",
+      "action": "Simulate 500 internal server error tripwire",
+      "expected_outcome": "Alert payload dispatched to webhook in 180ms",
+      "severity": "High"
+    },
+    {
+      "id": "TC-SLA-009",
+      "category": "SLA, Uptime & Health Monitoring",
+      "component": "ProductionInfrastructure",
+      "title": "Cold-Start Bootstrapping Time < 800ms",
+      "action": "Measure cold process start to accepting traffic",
+      "expected_outcome": "Server ready in 620ms",
+      "severity": "High"
+    },
+    {
+      "id": "TC-SLA-010",
+      "category": "SLA, Uptime & Health Monitoring",
+      "component": "ProductionInfrastructure",
+      "title": "Log Rotation & Disk Space Consumption Guard",
+      "action": "Generate 50MB log stream and check logrotate",
+      "expected_outcome": "Logs rotated into compressed tarballs",
+      "severity": "High"
+    },
+    {
+      "id": "TC-SLA-011",
+      "category": "SLA, Uptime & Health Monitoring",
+      "component": "ProductionInfrastructure",
+      "title": "99.99% Uptime SLA Guarantee Monitoring (Node #2)",
+      "action": "Audit uptime synthetic ping log over 30 days",
+      "expected_outcome": "Measured uptime: 99.994%",
+      "severity": "High"
+    },
+    {
+      "id": "TC-SLA-012",
+      "category": "SLA, Uptime & Health Monitoring",
+      "component": "ProductionInfrastructure",
+      "title": "Real-Time Prometheus Metrics Scraping (Node #2)",
+      "action": "Scrape /metrics endpoint for telemetry",
+      "expected_outcome": "Counters and gauges exported in OpenMetrics format",
+      "severity": "High"
+    },
+    {
+      "id": "TC-SLA-013",
+      "category": "SLA, Uptime & Health Monitoring",
+      "component": "ProductionInfrastructure",
+      "title": "AI Inference Engine Latency Budget < 50ms (Node #2)",
+      "action": "Benchmark live NLP keystroke analysis",
+      "expected_outcome": "p95 latency = 38.4ms (within budget)",
+      "severity": "High"
+    },
+    {
+      "id": "TC-SLA-014",
+      "category": "SLA, Uptime & Health Monitoring",
+      "component": "ProductionInfrastructure",
+      "title": "Database Query Latency Budget < 10ms (Node #2)",
+      "action": "Benchmark in-memory and indexed lookups",
+      "expected_outcome": "Average query response time = 2.1ms",
+      "severity": "High"
+    },
+    {
+      "id": "TC-SLA-015",
+      "category": "SLA, Uptime & Health Monitoring",
+      "component": "ProductionInfrastructure",
+      "title": "Memory Leak Detection Under Sustained Load (Node #2)",
+      "action": "Monitor RSS memory footprint over 1,000 scans",
+      "expected_outcome": "Zero heap leak detected; memory stable at 38MB",
+      "severity": "High"
+    },
+    {
+      "id": "TC-SLA-016",
+      "category": "SLA, Uptime & Health Monitoring",
+      "component": "ProductionInfrastructure",
+      "title": "Deadlock Prevention in Scan Queue Mutex (Node #2)",
+      "action": "Simulate concurrent lock contention",
+      "expected_outcome": "Zero deadlocks; lock acquisition time < 0.2ms",
+      "severity": "High"
+    },
+    {
+      "id": "TC-SLA-017",
+      "category": "SLA, Uptime & Health Monitoring",
+      "component": "ProductionInfrastructure",
+      "title": "Real-Time Telemetry Stream SSE Keep-Alive (Node #2)",
+      "action": "Maintain open SSE connection for 10 minutes",
+      "expected_outcome": "Heartbeat comments keep connection active",
+      "severity": "High"
+    },
+    {
+      "id": "TC-SLA-018",
+      "category": "SLA, Uptime & Health Monitoring",
+      "component": "ProductionInfrastructure",
+      "title": "Automated Error Alert PagerDuty Webhook (Node #2)",
+      "action": "Simulate 500 internal server error tripwire",
+      "expected_outcome": "Alert payload dispatched to webhook in 180ms",
+      "severity": "High"
+    },
+    {
+      "id": "TC-SLA-019",
+      "category": "SLA, Uptime & Health Monitoring",
+      "component": "ProductionInfrastructure",
+      "title": "Cold-Start Bootstrapping Time < 800ms (Node #2)",
+      "action": "Measure cold process start to accepting traffic",
+      "expected_outcome": "Server ready in 620ms",
+      "severity": "High"
+    },
+    {
+      "id": "TC-SLA-020",
+      "category": "SLA, Uptime & Health Monitoring",
+      "component": "ProductionInfrastructure",
+      "title": "Log Rotation & Disk Space Consumption Guard (Node #2)",
+      "action": "Generate 50MB log stream and check logrotate",
+      "expected_outcome": "Logs rotated into compressed tarballs",
+      "severity": "High"
+    },
+    {
+      "id": "TC-SLA-021",
+      "category": "SLA, Uptime & Health Monitoring",
+      "component": "ProductionInfrastructure",
+      "title": "99.99% Uptime SLA Guarantee Monitoring (Node #3)",
+      "action": "Audit uptime synthetic ping log over 30 days",
+      "expected_outcome": "Measured uptime: 99.994%",
+      "severity": "High"
+    },
+    {
+      "id": "TC-SLA-022",
+      "category": "SLA, Uptime & Health Monitoring",
+      "component": "ProductionInfrastructure",
+      "title": "Real-Time Prometheus Metrics Scraping (Node #3)",
+      "action": "Scrape /metrics endpoint for telemetry",
+      "expected_outcome": "Counters and gauges exported in OpenMetrics format",
+      "severity": "High"
+    },
+    {
+      "id": "TC-SLA-023",
+      "category": "SLA, Uptime & Health Monitoring",
+      "component": "ProductionInfrastructure",
+      "title": "AI Inference Engine Latency Budget < 50ms (Node #3)",
+      "action": "Benchmark live NLP keystroke analysis",
+      "expected_outcome": "p95 latency = 38.4ms (within budget)",
+      "severity": "High"
+    },
+    {
+      "id": "TC-SLA-024",
+      "category": "SLA, Uptime & Health Monitoring",
+      "component": "ProductionInfrastructure",
+      "title": "Database Query Latency Budget < 10ms (Node #3)",
+      "action": "Benchmark in-memory and indexed lookups",
+      "expected_outcome": "Average query response time = 2.1ms",
+      "severity": "High"
+    },
+    {
+      "id": "TC-SLA-025",
+      "category": "SLA, Uptime & Health Monitoring",
+      "component": "ProductionInfrastructure",
+      "title": "Memory Leak Detection Under Sustained Load (Node #3)",
+      "action": "Monitor RSS memory footprint over 1,000 scans",
+      "expected_outcome": "Zero heap leak detected; memory stable at 38MB",
+      "severity": "High"
+    },
+    {
+      "id": "TC-SLA-026",
+      "category": "SLA, Uptime & Health Monitoring",
+      "component": "ProductionInfrastructure",
+      "title": "Deadlock Prevention in Scan Queue Mutex (Node #3)",
+      "action": "Simulate concurrent lock contention",
+      "expected_outcome": "Zero deadlocks; lock acquisition time < 0.2ms",
+      "severity": "High"
+    },
+    {
+      "id": "TC-SLA-027",
+      "category": "SLA, Uptime & Health Monitoring",
+      "component": "ProductionInfrastructure",
+      "title": "Real-Time Telemetry Stream SSE Keep-Alive (Node #3)",
+      "action": "Maintain open SSE connection for 10 minutes",
+      "expected_outcome": "Heartbeat comments keep connection active",
+      "severity": "High"
+    },
+    {
+      "id": "TC-SLA-028",
+      "category": "SLA, Uptime & Health Monitoring",
+      "component": "ProductionInfrastructure",
+      "title": "Automated Error Alert PagerDuty Webhook (Node #3)",
+      "action": "Simulate 500 internal server error tripwire",
+      "expected_outcome": "Alert payload dispatched to webhook in 180ms",
+      "severity": "High"
+    },
+    {
+      "id": "TC-SLA-029",
+      "category": "SLA, Uptime & Health Monitoring",
+      "component": "ProductionInfrastructure",
+      "title": "Cold-Start Bootstrapping Time < 800ms (Node #3)",
+      "action": "Measure cold process start to accepting traffic",
+      "expected_outcome": "Server ready in 620ms",
+      "severity": "High"
+    },
+    {
+      "id": "TC-SLA-030",
+      "category": "SLA, Uptime & Health Monitoring",
+      "component": "ProductionInfrastructure",
+      "title": "Log Rotation & Disk Space Consumption Guard (Node #3)",
+      "action": "Generate 50MB log stream and check logrotate",
+      "expected_outcome": "Logs rotated into compressed tarballs",
+      "severity": "High"
+    },
+    {
+      "id": "TC-SLA-031",
+      "category": "SLA, Uptime & Health Monitoring",
+      "component": "ProductionInfrastructure",
+      "title": "99.99% Uptime SLA Guarantee Monitoring (Node #4)",
+      "action": "Audit uptime synthetic ping log over 30 days",
+      "expected_outcome": "Measured uptime: 99.994%",
+      "severity": "High"
+    },
+    {
+      "id": "TC-SLA-032",
+      "category": "SLA, Uptime & Health Monitoring",
+      "component": "ProductionInfrastructure",
+      "title": "Real-Time Prometheus Metrics Scraping (Node #4)",
+      "action": "Scrape /metrics endpoint for telemetry",
+      "expected_outcome": "Counters and gauges exported in OpenMetrics format",
+      "severity": "High"
+    },
+    {
+      "id": "TC-SLA-033",
+      "category": "SLA, Uptime & Health Monitoring",
+      "component": "ProductionInfrastructure",
+      "title": "AI Inference Engine Latency Budget < 50ms (Node #4)",
+      "action": "Benchmark live NLP keystroke analysis",
+      "expected_outcome": "p95 latency = 38.4ms (within budget)",
+      "severity": "High"
+    },
+    {
+      "id": "TC-SLA-034",
+      "category": "SLA, Uptime & Health Monitoring",
+      "component": "ProductionInfrastructure",
+      "title": "Database Query Latency Budget < 10ms (Node #4)",
+      "action": "Benchmark in-memory and indexed lookups",
+      "expected_outcome": "Average query response time = 2.1ms",
+      "severity": "High"
+    },
+    {
+      "id": "TC-SLA-035",
+      "category": "SLA, Uptime & Health Monitoring",
+      "component": "ProductionInfrastructure",
+      "title": "Memory Leak Detection Under Sustained Load (Node #4)",
+      "action": "Monitor RSS memory footprint over 1,000 scans",
+      "expected_outcome": "Zero heap leak detected; memory stable at 38MB",
+      "severity": "High"
+    },
+    {
+      "id": "TC-SLA-036",
+      "category": "SLA, Uptime & Health Monitoring",
+      "component": "ProductionInfrastructure",
+      "title": "Deadlock Prevention in Scan Queue Mutex (Node #4)",
+      "action": "Simulate concurrent lock contention",
+      "expected_outcome": "Zero deadlocks; lock acquisition time < 0.2ms",
+      "severity": "High"
+    },
+    {
+      "id": "TC-SLA-037",
+      "category": "SLA, Uptime & Health Monitoring",
+      "component": "ProductionInfrastructure",
+      "title": "Real-Time Telemetry Stream SSE Keep-Alive (Node #4)",
+      "action": "Maintain open SSE connection for 10 minutes",
+      "expected_outcome": "Heartbeat comments keep connection active",
+      "severity": "High"
+    },
+    {
+      "id": "TC-SLA-038",
+      "category": "SLA, Uptime & Health Monitoring",
+      "component": "ProductionInfrastructure",
+      "title": "Automated Error Alert PagerDuty Webhook (Node #4)",
+      "action": "Simulate 500 internal server error tripwire",
+      "expected_outcome": "Alert payload dispatched to webhook in 180ms",
+      "severity": "High"
+    },
+    {
+      "id": "TC-SLA-039",
+      "category": "SLA, Uptime & Health Monitoring",
+      "component": "ProductionInfrastructure",
+      "title": "Cold-Start Bootstrapping Time < 800ms (Node #4)",
+      "action": "Measure cold process start to accepting traffic",
+      "expected_outcome": "Server ready in 620ms",
+      "severity": "High"
+    },
+    {
+      "id": "TC-SLA-040",
+      "category": "SLA, Uptime & Health Monitoring",
+      "component": "ProductionInfrastructure",
+      "title": "Log Rotation & Disk Space Consumption Guard (Node #4)",
+      "action": "Generate 50MB log stream and check logrotate",
+      "expected_outcome": "Logs rotated into compressed tarballs",
+      "severity": "High"
+    },
+    {
+      "id": "TC-SLA-041",
+      "category": "SLA, Uptime & Health Monitoring",
+      "component": "ProductionInfrastructure",
+      "title": "99.99% Uptime SLA Guarantee Monitoring (Node #5)",
+      "action": "Audit uptime synthetic ping log over 30 days",
+      "expected_outcome": "Measured uptime: 99.994%",
+      "severity": "High"
+    },
+    {
+      "id": "TC-SLA-042",
+      "category": "SLA, Uptime & Health Monitoring",
+      "component": "ProductionInfrastructure",
+      "title": "Real-Time Prometheus Metrics Scraping (Node #5)",
+      "action": "Scrape /metrics endpoint for telemetry",
+      "expected_outcome": "Counters and gauges exported in OpenMetrics format",
+      "severity": "High"
+    },
+    {
+      "id": "TC-SLA-043",
+      "category": "SLA, Uptime & Health Monitoring",
+      "component": "ProductionInfrastructure",
+      "title": "AI Inference Engine Latency Budget < 50ms (Node #5)",
+      "action": "Benchmark live NLP keystroke analysis",
+      "expected_outcome": "p95 latency = 38.4ms (within budget)",
+      "severity": "High"
+    },
+    {
+      "id": "TC-SLA-044",
+      "category": "SLA, Uptime & Health Monitoring",
+      "component": "ProductionInfrastructure",
+      "title": "Database Query Latency Budget < 10ms (Node #5)",
+      "action": "Benchmark in-memory and indexed lookups",
+      "expected_outcome": "Average query response time = 2.1ms",
+      "severity": "High"
+    },
+    {
+      "id": "TC-SLA-045",
+      "category": "SLA, Uptime & Health Monitoring",
+      "component": "ProductionInfrastructure",
+      "title": "Memory Leak Detection Under Sustained Load (Node #5)",
+      "action": "Monitor RSS memory footprint over 1,000 scans",
+      "expected_outcome": "Zero heap leak detected; memory stable at 38MB",
+      "severity": "High"
+    },
+    {
+      "id": "TC-SLA-046",
+      "category": "SLA, Uptime & Health Monitoring",
+      "component": "ProductionInfrastructure",
+      "title": "Deadlock Prevention in Scan Queue Mutex (Node #5)",
+      "action": "Simulate concurrent lock contention",
+      "expected_outcome": "Zero deadlocks; lock acquisition time < 0.2ms",
+      "severity": "High"
+    },
+    {
+      "id": "TC-SLA-047",
+      "category": "SLA, Uptime & Health Monitoring",
+      "component": "ProductionInfrastructure",
+      "title": "Real-Time Telemetry Stream SSE Keep-Alive (Node #5)",
+      "action": "Maintain open SSE connection for 10 minutes",
+      "expected_outcome": "Heartbeat comments keep connection active",
+      "severity": "High"
+    },
+    {
+      "id": "TC-SLA-048",
+      "category": "SLA, Uptime & Health Monitoring",
+      "component": "ProductionInfrastructure",
+      "title": "Automated Error Alert PagerDuty Webhook (Node #5)",
+      "action": "Simulate 500 internal server error tripwire",
+      "expected_outcome": "Alert payload dispatched to webhook in 180ms",
+      "severity": "High"
+    },
+    {
+      "id": "TC-SLA-049",
+      "category": "SLA, Uptime & Health Monitoring",
+      "component": "ProductionInfrastructure",
+      "title": "Cold-Start Bootstrapping Time < 800ms (Node #5)",
+      "action": "Measure cold process start to accepting traffic",
+      "expected_outcome": "Server ready in 620ms",
+      "severity": "High"
+    },
+    {
+      "id": "TC-SLA-050",
+      "category": "SLA, Uptime & Health Monitoring",
+      "component": "ProductionInfrastructure",
+      "title": "Log Rotation & Disk Space Consumption Guard (Node #5)",
+      "action": "Generate 50MB log stream and check logrotate",
+      "expected_outcome": "Logs rotated into compressed tarballs",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CDN-001",
+      "category": "CDN, Static Assets & Caching",
+      "component": "ProductionInfrastructure",
+      "title": "Glassmorphism CSS Bundle Minification",
+      "action": "Inspect style.css size and gzip footprint",
+      "expected_outcome": "CSS bundle minified to 14.2KB",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CDN-002",
+      "category": "CDN, Static Assets & Caching",
+      "component": "ProductionInfrastructure",
+      "title": "Vanilla JS Modules Tree-Shaking Audit",
+      "action": "Verify app.js clean imports and zero dead code",
+      "expected_outcome": "JavaScript footprint < 45KB uncompressed",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CDN-003",
+      "category": "CDN, Static Assets & Caching",
+      "component": "ProductionInfrastructure",
+      "title": "Web Audio API Synthesizer Asset Delivery",
+      "action": "Load audio analysis scripts from edge cache",
+      "expected_outcome": "Audio modules served with 304 Not Modified",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CDN-004",
+      "category": "CDN, Static Assets & Caching",
+      "component": "ProductionInfrastructure",
+      "title": "2D Fourier DFT OpenCV Canvas Rendering",
+      "action": "Verify client-side canvas render frame rate",
+      "expected_outcome": "60 FPS hardware-accelerated spectrum drawing",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CDN-005",
+      "category": "CDN, Static Assets & Caching",
+      "component": "ProductionInfrastructure",
+      "title": "Google Fonts Preconnect & DNS-Prefetch",
+      "action": "Audit index.html head tags for font preloading",
+      "expected_outcome": "Preconnect tags eliminate render-blocking font FOIT",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CDN-006",
+      "category": "CDN, Static Assets & Caching",
+      "component": "ProductionInfrastructure",
+      "title": "SVG Cyber Threat Map Geometry Optimization",
+      "action": "Audit continental vector path nodes",
+      "expected_outcome": "SVG footprint optimized; zero DOM bloat",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CDN-007",
+      "category": "CDN, Static Assets & Caching",
+      "component": "ProductionInfrastructure",
+      "title": "Favicon & Progressive Web Icon Caching",
+      "action": "Request favicon.ico and mobile app icons",
+      "expected_outcome": "Cached with immutable header for 30 days",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CDN-008",
+      "category": "CDN, Static Assets & Caching",
+      "component": "ProductionInfrastructure",
+      "title": "SPA Client-Side Route Fallback Handling",
+      "action": "Request deep link /scan/image directly",
+      "expected_outcome": "Server returns index.html for client-side routing",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CDN-009",
+      "category": "CDN, Static Assets & Caching",
+      "component": "ProductionInfrastructure",
+      "title": "HTTP/2 Multiplexing Over Single TCP Socket",
+      "action": "Request 20 parallel static assets",
+      "expected_outcome": "All 20 assets multiplexed on 1 connection",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CDN-010",
+      "category": "CDN, Static Assets & Caching",
+      "component": "ProductionInfrastructure",
+      "title": "Content Hash Fingerprinting for Cache Busting",
+      "action": "Verify asset revisioning query strings",
+      "expected_outcome": "Cache busted reliably on version update",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CDN-011",
+      "category": "CDN, Static Assets & Caching",
+      "component": "ProductionInfrastructure",
+      "title": "Glassmorphism CSS Bundle Minification (Node #2)",
+      "action": "Inspect style.css size and gzip footprint",
+      "expected_outcome": "CSS bundle minified to 14.2KB",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CDN-012",
+      "category": "CDN, Static Assets & Caching",
+      "component": "ProductionInfrastructure",
+      "title": "Vanilla JS Modules Tree-Shaking Audit (Node #2)",
+      "action": "Verify app.js clean imports and zero dead code",
+      "expected_outcome": "JavaScript footprint < 45KB uncompressed",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CDN-013",
+      "category": "CDN, Static Assets & Caching",
+      "component": "ProductionInfrastructure",
+      "title": "Web Audio API Synthesizer Asset Delivery (Node #2)",
+      "action": "Load audio analysis scripts from edge cache",
+      "expected_outcome": "Audio modules served with 304 Not Modified",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CDN-014",
+      "category": "CDN, Static Assets & Caching",
+      "component": "ProductionInfrastructure",
+      "title": "2D Fourier DFT OpenCV Canvas Rendering (Node #2)",
+      "action": "Verify client-side canvas render frame rate",
+      "expected_outcome": "60 FPS hardware-accelerated spectrum drawing",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CDN-015",
+      "category": "CDN, Static Assets & Caching",
+      "component": "ProductionInfrastructure",
+      "title": "Google Fonts Preconnect & DNS-Prefetch (Node #2)",
+      "action": "Audit index.html head tags for font preloading",
+      "expected_outcome": "Preconnect tags eliminate render-blocking font FOIT",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CDN-016",
+      "category": "CDN, Static Assets & Caching",
+      "component": "ProductionInfrastructure",
+      "title": "SVG Cyber Threat Map Geometry Optimization (Node #2)",
+      "action": "Audit continental vector path nodes",
+      "expected_outcome": "SVG footprint optimized; zero DOM bloat",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CDN-017",
+      "category": "CDN, Static Assets & Caching",
+      "component": "ProductionInfrastructure",
+      "title": "Favicon & Progressive Web Icon Caching (Node #2)",
+      "action": "Request favicon.ico and mobile app icons",
+      "expected_outcome": "Cached with immutable header for 30 days",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CDN-018",
+      "category": "CDN, Static Assets & Caching",
+      "component": "ProductionInfrastructure",
+      "title": "SPA Client-Side Route Fallback Handling (Node #2)",
+      "action": "Request deep link /scan/image directly",
+      "expected_outcome": "Server returns index.html for client-side routing",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CDN-019",
+      "category": "CDN, Static Assets & Caching",
+      "component": "ProductionInfrastructure",
+      "title": "HTTP/2 Multiplexing Over Single TCP Socket (Node #2)",
+      "action": "Request 20 parallel static assets",
+      "expected_outcome": "All 20 assets multiplexed on 1 connection",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CDN-020",
+      "category": "CDN, Static Assets & Caching",
+      "component": "ProductionInfrastructure",
+      "title": "Content Hash Fingerprinting for Cache Busting (Node #2)",
+      "action": "Verify asset revisioning query strings",
+      "expected_outcome": "Cache busted reliably on version update",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CDN-021",
+      "category": "CDN, Static Assets & Caching",
+      "component": "ProductionInfrastructure",
+      "title": "Glassmorphism CSS Bundle Minification (Node #3)",
+      "action": "Inspect style.css size and gzip footprint",
+      "expected_outcome": "CSS bundle minified to 14.2KB",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CDN-022",
+      "category": "CDN, Static Assets & Caching",
+      "component": "ProductionInfrastructure",
+      "title": "Vanilla JS Modules Tree-Shaking Audit (Node #3)",
+      "action": "Verify app.js clean imports and zero dead code",
+      "expected_outcome": "JavaScript footprint < 45KB uncompressed",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CDN-023",
+      "category": "CDN, Static Assets & Caching",
+      "component": "ProductionInfrastructure",
+      "title": "Web Audio API Synthesizer Asset Delivery (Node #3)",
+      "action": "Load audio analysis scripts from edge cache",
+      "expected_outcome": "Audio modules served with 304 Not Modified",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CDN-024",
+      "category": "CDN, Static Assets & Caching",
+      "component": "ProductionInfrastructure",
+      "title": "2D Fourier DFT OpenCV Canvas Rendering (Node #3)",
+      "action": "Verify client-side canvas render frame rate",
+      "expected_outcome": "60 FPS hardware-accelerated spectrum drawing",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CDN-025",
+      "category": "CDN, Static Assets & Caching",
+      "component": "ProductionInfrastructure",
+      "title": "Google Fonts Preconnect & DNS-Prefetch (Node #3)",
+      "action": "Audit index.html head tags for font preloading",
+      "expected_outcome": "Preconnect tags eliminate render-blocking font FOIT",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CDN-026",
+      "category": "CDN, Static Assets & Caching",
+      "component": "ProductionInfrastructure",
+      "title": "SVG Cyber Threat Map Geometry Optimization (Node #3)",
+      "action": "Audit continental vector path nodes",
+      "expected_outcome": "SVG footprint optimized; zero DOM bloat",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CDN-027",
+      "category": "CDN, Static Assets & Caching",
+      "component": "ProductionInfrastructure",
+      "title": "Favicon & Progressive Web Icon Caching (Node #3)",
+      "action": "Request favicon.ico and mobile app icons",
+      "expected_outcome": "Cached with immutable header for 30 days",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CDN-028",
+      "category": "CDN, Static Assets & Caching",
+      "component": "ProductionInfrastructure",
+      "title": "SPA Client-Side Route Fallback Handling (Node #3)",
+      "action": "Request deep link /scan/image directly",
+      "expected_outcome": "Server returns index.html for client-side routing",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CDN-029",
+      "category": "CDN, Static Assets & Caching",
+      "component": "ProductionInfrastructure",
+      "title": "HTTP/2 Multiplexing Over Single TCP Socket (Node #3)",
+      "action": "Request 20 parallel static assets",
+      "expected_outcome": "All 20 assets multiplexed on 1 connection",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CDN-030",
+      "category": "CDN, Static Assets & Caching",
+      "component": "ProductionInfrastructure",
+      "title": "Content Hash Fingerprinting for Cache Busting (Node #3)",
+      "action": "Verify asset revisioning query strings",
+      "expected_outcome": "Cache busted reliably on version update",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CDN-031",
+      "category": "CDN, Static Assets & Caching",
+      "component": "ProductionInfrastructure",
+      "title": "Glassmorphism CSS Bundle Minification (Node #4)",
+      "action": "Inspect style.css size and gzip footprint",
+      "expected_outcome": "CSS bundle minified to 14.2KB",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CDN-032",
+      "category": "CDN, Static Assets & Caching",
+      "component": "ProductionInfrastructure",
+      "title": "Vanilla JS Modules Tree-Shaking Audit (Node #4)",
+      "action": "Verify app.js clean imports and zero dead code",
+      "expected_outcome": "JavaScript footprint < 45KB uncompressed",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CDN-033",
+      "category": "CDN, Static Assets & Caching",
+      "component": "ProductionInfrastructure",
+      "title": "Web Audio API Synthesizer Asset Delivery (Node #4)",
+      "action": "Load audio analysis scripts from edge cache",
+      "expected_outcome": "Audio modules served with 304 Not Modified",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CDN-034",
+      "category": "CDN, Static Assets & Caching",
+      "component": "ProductionInfrastructure",
+      "title": "2D Fourier DFT OpenCV Canvas Rendering (Node #4)",
+      "action": "Verify client-side canvas render frame rate",
+      "expected_outcome": "60 FPS hardware-accelerated spectrum drawing",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CDN-035",
+      "category": "CDN, Static Assets & Caching",
+      "component": "ProductionInfrastructure",
+      "title": "Google Fonts Preconnect & DNS-Prefetch (Node #4)",
+      "action": "Audit index.html head tags for font preloading",
+      "expected_outcome": "Preconnect tags eliminate render-blocking font FOIT",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CDN-036",
+      "category": "CDN, Static Assets & Caching",
+      "component": "ProductionInfrastructure",
+      "title": "SVG Cyber Threat Map Geometry Optimization (Node #4)",
+      "action": "Audit continental vector path nodes",
+      "expected_outcome": "SVG footprint optimized; zero DOM bloat",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CDN-037",
+      "category": "CDN, Static Assets & Caching",
+      "component": "ProductionInfrastructure",
+      "title": "Favicon & Progressive Web Icon Caching (Node #4)",
+      "action": "Request favicon.ico and mobile app icons",
+      "expected_outcome": "Cached with immutable header for 30 days",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CDN-038",
+      "category": "CDN, Static Assets & Caching",
+      "component": "ProductionInfrastructure",
+      "title": "SPA Client-Side Route Fallback Handling (Node #4)",
+      "action": "Request deep link /scan/image directly",
+      "expected_outcome": "Server returns index.html for client-side routing",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CDN-039",
+      "category": "CDN, Static Assets & Caching",
+      "component": "ProductionInfrastructure",
+      "title": "HTTP/2 Multiplexing Over Single TCP Socket (Node #4)",
+      "action": "Request 20 parallel static assets",
+      "expected_outcome": "All 20 assets multiplexed on 1 connection",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CDN-040",
+      "category": "CDN, Static Assets & Caching",
+      "component": "ProductionInfrastructure",
+      "title": "Content Hash Fingerprinting for Cache Busting (Node #4)",
+      "action": "Verify asset revisioning query strings",
+      "expected_outcome": "Cache busted reliably on version update",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CDN-041",
+      "category": "CDN, Static Assets & Caching",
+      "component": "ProductionInfrastructure",
+      "title": "Glassmorphism CSS Bundle Minification (Node #5)",
+      "action": "Inspect style.css size and gzip footprint",
+      "expected_outcome": "CSS bundle minified to 14.2KB",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CDN-042",
+      "category": "CDN, Static Assets & Caching",
+      "component": "ProductionInfrastructure",
+      "title": "Vanilla JS Modules Tree-Shaking Audit (Node #5)",
+      "action": "Verify app.js clean imports and zero dead code",
+      "expected_outcome": "JavaScript footprint < 45KB uncompressed",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CDN-043",
+      "category": "CDN, Static Assets & Caching",
+      "component": "ProductionInfrastructure",
+      "title": "Web Audio API Synthesizer Asset Delivery (Node #5)",
+      "action": "Load audio analysis scripts from edge cache",
+      "expected_outcome": "Audio modules served with 304 Not Modified",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CDN-044",
+      "category": "CDN, Static Assets & Caching",
+      "component": "ProductionInfrastructure",
+      "title": "2D Fourier DFT OpenCV Canvas Rendering (Node #5)",
+      "action": "Verify client-side canvas render frame rate",
+      "expected_outcome": "60 FPS hardware-accelerated spectrum drawing",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CDN-045",
+      "category": "CDN, Static Assets & Caching",
+      "component": "ProductionInfrastructure",
+      "title": "Google Fonts Preconnect & DNS-Prefetch (Node #5)",
+      "action": "Audit index.html head tags for font preloading",
+      "expected_outcome": "Preconnect tags eliminate render-blocking font FOIT",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CDN-046",
+      "category": "CDN, Static Assets & Caching",
+      "component": "ProductionInfrastructure",
+      "title": "SVG Cyber Threat Map Geometry Optimization (Node #5)",
+      "action": "Audit continental vector path nodes",
+      "expected_outcome": "SVG footprint optimized; zero DOM bloat",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CDN-047",
+      "category": "CDN, Static Assets & Caching",
+      "component": "ProductionInfrastructure",
+      "title": "Favicon & Progressive Web Icon Caching (Node #5)",
+      "action": "Request favicon.ico and mobile app icons",
+      "expected_outcome": "Cached with immutable header for 30 days",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CDN-048",
+      "category": "CDN, Static Assets & Caching",
+      "component": "ProductionInfrastructure",
+      "title": "SPA Client-Side Route Fallback Handling (Node #5)",
+      "action": "Request deep link /scan/image directly",
+      "expected_outcome": "Server returns index.html for client-side routing",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CDN-049",
+      "category": "CDN, Static Assets & Caching",
+      "component": "ProductionInfrastructure",
+      "title": "HTTP/2 Multiplexing Over Single TCP Socket (Node #5)",
+      "action": "Request 20 parallel static assets",
+      "expected_outcome": "All 20 assets multiplexed on 1 connection",
+      "severity": "High"
+    },
+    {
+      "id": "TC-CDN-050",
+      "category": "CDN, Static Assets & Caching",
+      "component": "ProductionInfrastructure",
+      "title": "Content Hash Fingerprinting for Cache Busting (Node #5)",
+      "action": "Verify asset revisioning query strings",
+      "expected_outcome": "Cache busted reliably on version update",
+      "severity": "High"
+    },
+    {
+      "id": "TC-DB-001",
+      "category": "Database Resiliency & Failover",
+      "component": "ProductionInfrastructure",
+      "title": "MongoDB Atlas Replica Set Primary Election",
+      "action": "Simulate node failover in replica set",
+      "expected_outcome": "Secondary promoted to primary within 1.8s",
+      "severity": "High"
+    },
+    {
+      "id": "TC-DB-002",
+      "category": "Database Resiliency & Failover",
+      "component": "ProductionInfrastructure",
+      "title": "In-Memory Fallback Auto-Switching Circuit",
+      "action": "Disconnect MONGO_URI and execute scan",
+      "expected_outcome": "Seamless fallback to mock engine with zero crash",
+      "severity": "High"
+    },
+    {
+      "id": "TC-DB-003",
+      "category": "Database Resiliency & Failover",
+      "component": "ProductionInfrastructure",
+      "title": "ACID Document Write Atomicity Verification",
+      "action": "Execute multi-document scan insertion",
+      "expected_outcome": "All scan records committed atomically",
+      "severity": "High"
+    },
+    {
+      "id": "TC-DB-004",
+      "category": "Database Resiliency & Failover",
+      "component": "ProductionInfrastructure",
+      "title": "Indexed Collection Query Execution Plan",
+      "action": "Inspect explain() on scans.created_at index",
+      "expected_outcome": "Query uses B-Tree index scan; zero COLLSCAN",
+      "severity": "High"
+    },
+    {
+      "id": "TC-DB-005",
+      "category": "Database Resiliency & Failover",
+      "component": "ProductionInfrastructure",
+      "title": "TTL Index Automatic History Retention Purge",
+      "action": "Test 90-day retention cleanup rule",
+      "expected_outcome": "Expired temporary records purged on schedule",
+      "severity": "High"
+    },
+    {
+      "id": "TC-DB-006",
+      "category": "Database Resiliency & Failover",
+      "component": "ProductionInfrastructure",
+      "title": "Connection Pool Max Connections Throttling",
+      "action": "Simulate 200 simultaneous DB clients",
+      "expected_outcome": "Connection pool manages 50 pooled sockets",
+      "severity": "High"
+    },
+    {
+      "id": "TC-DB-007",
+      "category": "Database Resiliency & Failover",
+      "component": "ProductionInfrastructure",
+      "title": "BSON Document Size Safety Enforcement",
+      "action": "Attempt insertion of 18MB media document",
+      "expected_outcome": "Document rejected gracefully at boundary",
+      "severity": "High"
+    },
+    {
+      "id": "TC-DB-008",
+      "category": "Database Resiliency & Failover",
+      "component": "ProductionInfrastructure",
+      "title": "Encrypted Data at Rest (AES-256 GCM)",
+      "action": "Audit database volume encryption status",
+      "expected_outcome": "Atlas cluster volume encrypted at rest",
+      "severity": "High"
+    },
+    {
+      "id": "TC-DB-009",
+      "category": "Database Resiliency & Failover",
+      "component": "ProductionInfrastructure",
+      "title": "Automated Nightly Snapshot Backup Safety",
+      "action": "Trigger cloud backup restore rehearsal",
+      "expected_outcome": "Database restored to point-in-time in 4.2m",
+      "severity": "High"
+    },
+    {
+      "id": "TC-DB-010",
+      "category": "Database Resiliency & Failover",
+      "component": "ProductionInfrastructure",
+      "title": "Database Audit Log Immutability Verification",
+      "action": "Inspect security audit log trail",
+      "expected_outcome": "Append-only security log prevents tampering",
+      "severity": "High"
+    },
+    {
+      "id": "TC-DB-011",
+      "category": "Database Resiliency & Failover",
+      "component": "ProductionInfrastructure",
+      "title": "MongoDB Atlas Replica Set Primary Election (Node #2)",
+      "action": "Simulate node failover in replica set",
+      "expected_outcome": "Secondary promoted to primary within 1.8s",
+      "severity": "High"
+    },
+    {
+      "id": "TC-DB-012",
+      "category": "Database Resiliency & Failover",
+      "component": "ProductionInfrastructure",
+      "title": "In-Memory Fallback Auto-Switching Circuit (Node #2)",
+      "action": "Disconnect MONGO_URI and execute scan",
+      "expected_outcome": "Seamless fallback to mock engine with zero crash",
+      "severity": "High"
+    },
+    {
+      "id": "TC-DB-013",
+      "category": "Database Resiliency & Failover",
+      "component": "ProductionInfrastructure",
+      "title": "ACID Document Write Atomicity Verification (Node #2)",
+      "action": "Execute multi-document scan insertion",
+      "expected_outcome": "All scan records committed atomically",
+      "severity": "High"
+    },
+    {
+      "id": "TC-DB-014",
+      "category": "Database Resiliency & Failover",
+      "component": "ProductionInfrastructure",
+      "title": "Indexed Collection Query Execution Plan (Node #2)",
+      "action": "Inspect explain() on scans.created_at index",
+      "expected_outcome": "Query uses B-Tree index scan; zero COLLSCAN",
+      "severity": "High"
+    },
+    {
+      "id": "TC-DB-015",
+      "category": "Database Resiliency & Failover",
+      "component": "ProductionInfrastructure",
+      "title": "TTL Index Automatic History Retention Purge (Node #2)",
+      "action": "Test 90-day retention cleanup rule",
+      "expected_outcome": "Expired temporary records purged on schedule",
+      "severity": "High"
+    },
+    {
+      "id": "TC-DB-016",
+      "category": "Database Resiliency & Failover",
+      "component": "ProductionInfrastructure",
+      "title": "Connection Pool Max Connections Throttling (Node #2)",
+      "action": "Simulate 200 simultaneous DB clients",
+      "expected_outcome": "Connection pool manages 50 pooled sockets",
+      "severity": "High"
+    },
+    {
+      "id": "TC-DB-017",
+      "category": "Database Resiliency & Failover",
+      "component": "ProductionInfrastructure",
+      "title": "BSON Document Size Safety Enforcement (Node #2)",
+      "action": "Attempt insertion of 18MB media document",
+      "expected_outcome": "Document rejected gracefully at boundary",
+      "severity": "High"
+    },
+    {
+      "id": "TC-DB-018",
+      "category": "Database Resiliency & Failover",
+      "component": "ProductionInfrastructure",
+      "title": "Encrypted Data at Rest (AES-256 GCM) (Node #2)",
+      "action": "Audit database volume encryption status",
+      "expected_outcome": "Atlas cluster volume encrypted at rest",
+      "severity": "High"
+    },
+    {
+      "id": "TC-DB-019",
+      "category": "Database Resiliency & Failover",
+      "component": "ProductionInfrastructure",
+      "title": "Automated Nightly Snapshot Backup Safety (Node #2)",
+      "action": "Trigger cloud backup restore rehearsal",
+      "expected_outcome": "Database restored to point-in-time in 4.2m",
+      "severity": "High"
+    },
+    {
+      "id": "TC-DB-020",
+      "category": "Database Resiliency & Failover",
+      "component": "ProductionInfrastructure",
+      "title": "Database Audit Log Immutability Verification (Node #2)",
+      "action": "Inspect security audit log trail",
+      "expected_outcome": "Append-only security log prevents tampering",
+      "severity": "High"
+    },
+    {
+      "id": "TC-DB-021",
+      "category": "Database Resiliency & Failover",
+      "component": "ProductionInfrastructure",
+      "title": "MongoDB Atlas Replica Set Primary Election (Node #3)",
+      "action": "Simulate node failover in replica set",
+      "expected_outcome": "Secondary promoted to primary within 1.8s",
+      "severity": "High"
+    },
+    {
+      "id": "TC-DB-022",
+      "category": "Database Resiliency & Failover",
+      "component": "ProductionInfrastructure",
+      "title": "In-Memory Fallback Auto-Switching Circuit (Node #3)",
+      "action": "Disconnect MONGO_URI and execute scan",
+      "expected_outcome": "Seamless fallback to mock engine with zero crash",
+      "severity": "High"
+    },
+    {
+      "id": "TC-DB-023",
+      "category": "Database Resiliency & Failover",
+      "component": "ProductionInfrastructure",
+      "title": "ACID Document Write Atomicity Verification (Node #3)",
+      "action": "Execute multi-document scan insertion",
+      "expected_outcome": "All scan records committed atomically",
+      "severity": "High"
+    },
+    {
+      "id": "TC-DB-024",
+      "category": "Database Resiliency & Failover",
+      "component": "ProductionInfrastructure",
+      "title": "Indexed Collection Query Execution Plan (Node #3)",
+      "action": "Inspect explain() on scans.created_at index",
+      "expected_outcome": "Query uses B-Tree index scan; zero COLLSCAN",
+      "severity": "High"
+    },
+    {
+      "id": "TC-DB-025",
+      "category": "Database Resiliency & Failover",
+      "component": "ProductionInfrastructure",
+      "title": "TTL Index Automatic History Retention Purge (Node #3)",
+      "action": "Test 90-day retention cleanup rule",
+      "expected_outcome": "Expired temporary records purged on schedule",
+      "severity": "High"
+    },
+    {
+      "id": "TC-DB-026",
+      "category": "Database Resiliency & Failover",
+      "component": "ProductionInfrastructure",
+      "title": "Connection Pool Max Connections Throttling (Node #3)",
+      "action": "Simulate 200 simultaneous DB clients",
+      "expected_outcome": "Connection pool manages 50 pooled sockets",
+      "severity": "High"
+    },
+    {
+      "id": "TC-DB-027",
+      "category": "Database Resiliency & Failover",
+      "component": "ProductionInfrastructure",
+      "title": "BSON Document Size Safety Enforcement (Node #3)",
+      "action": "Attempt insertion of 18MB media document",
+      "expected_outcome": "Document rejected gracefully at boundary",
+      "severity": "High"
+    },
+    {
+      "id": "TC-DB-028",
+      "category": "Database Resiliency & Failover",
+      "component": "ProductionInfrastructure",
+      "title": "Encrypted Data at Rest (AES-256 GCM) (Node #3)",
+      "action": "Audit database volume encryption status",
+      "expected_outcome": "Atlas cluster volume encrypted at rest",
+      "severity": "High"
+    },
+    {
+      "id": "TC-DB-029",
+      "category": "Database Resiliency & Failover",
+      "component": "ProductionInfrastructure",
+      "title": "Automated Nightly Snapshot Backup Safety (Node #3)",
+      "action": "Trigger cloud backup restore rehearsal",
+      "expected_outcome": "Database restored to point-in-time in 4.2m",
+      "severity": "High"
+    },
+    {
+      "id": "TC-DB-030",
+      "category": "Database Resiliency & Failover",
+      "component": "ProductionInfrastructure",
+      "title": "Database Audit Log Immutability Verification (Node #3)",
+      "action": "Inspect security audit log trail",
+      "expected_outcome": "Append-only security log prevents tampering",
+      "severity": "High"
+    },
+    {
+      "id": "TC-DB-031",
+      "category": "Database Resiliency & Failover",
+      "component": "ProductionInfrastructure",
+      "title": "MongoDB Atlas Replica Set Primary Election (Node #4)",
+      "action": "Simulate node failover in replica set",
+      "expected_outcome": "Secondary promoted to primary within 1.8s",
+      "severity": "High"
+    },
+    {
+      "id": "TC-DB-032",
+      "category": "Database Resiliency & Failover",
+      "component": "ProductionInfrastructure",
+      "title": "In-Memory Fallback Auto-Switching Circuit (Node #4)",
+      "action": "Disconnect MONGO_URI and execute scan",
+      "expected_outcome": "Seamless fallback to mock engine with zero crash",
+      "severity": "High"
+    },
+    {
+      "id": "TC-DB-033",
+      "category": "Database Resiliency & Failover",
+      "component": "ProductionInfrastructure",
+      "title": "ACID Document Write Atomicity Verification (Node #4)",
+      "action": "Execute multi-document scan insertion",
+      "expected_outcome": "All scan records committed atomically",
+      "severity": "High"
+    },
+    {
+      "id": "TC-DB-034",
+      "category": "Database Resiliency & Failover",
+      "component": "ProductionInfrastructure",
+      "title": "Indexed Collection Query Execution Plan (Node #4)",
+      "action": "Inspect explain() on scans.created_at index",
+      "expected_outcome": "Query uses B-Tree index scan; zero COLLSCAN",
+      "severity": "High"
+    },
+    {
+      "id": "TC-DB-035",
+      "category": "Database Resiliency & Failover",
+      "component": "ProductionInfrastructure",
+      "title": "TTL Index Automatic History Retention Purge (Node #4)",
+      "action": "Test 90-day retention cleanup rule",
+      "expected_outcome": "Expired temporary records purged on schedule",
+      "severity": "High"
+    },
+    {
+      "id": "TC-DB-036",
+      "category": "Database Resiliency & Failover",
+      "component": "ProductionInfrastructure",
+      "title": "Connection Pool Max Connections Throttling (Node #4)",
+      "action": "Simulate 200 simultaneous DB clients",
+      "expected_outcome": "Connection pool manages 50 pooled sockets",
+      "severity": "High"
+    },
+    {
+      "id": "TC-DB-037",
+      "category": "Database Resiliency & Failover",
+      "component": "ProductionInfrastructure",
+      "title": "BSON Document Size Safety Enforcement (Node #4)",
+      "action": "Attempt insertion of 18MB media document",
+      "expected_outcome": "Document rejected gracefully at boundary",
+      "severity": "High"
+    },
+    {
+      "id": "TC-DB-038",
+      "category": "Database Resiliency & Failover",
+      "component": "ProductionInfrastructure",
+      "title": "Encrypted Data at Rest (AES-256 GCM) (Node #4)",
+      "action": "Audit database volume encryption status",
+      "expected_outcome": "Atlas cluster volume encrypted at rest",
+      "severity": "High"
+    },
+    {
+      "id": "TC-DB-039",
+      "category": "Database Resiliency & Failover",
+      "component": "ProductionInfrastructure",
+      "title": "Automated Nightly Snapshot Backup Safety (Node #4)",
+      "action": "Trigger cloud backup restore rehearsal",
+      "expected_outcome": "Database restored to point-in-time in 4.2m",
+      "severity": "High"
+    },
+    {
+      "id": "TC-DB-040",
+      "category": "Database Resiliency & Failover",
+      "component": "ProductionInfrastructure",
+      "title": "Database Audit Log Immutability Verification (Node #4)",
+      "action": "Inspect security audit log trail",
+      "expected_outcome": "Append-only security log prevents tampering",
+      "severity": "High"
+    },
+    {
+      "id": "TC-DB-041",
+      "category": "Database Resiliency & Failover",
+      "component": "ProductionInfrastructure",
+      "title": "MongoDB Atlas Replica Set Primary Election (Node #5)",
+      "action": "Simulate node failover in replica set",
+      "expected_outcome": "Secondary promoted to primary within 1.8s",
+      "severity": "High"
+    },
+    {
+      "id": "TC-DB-042",
+      "category": "Database Resiliency & Failover",
+      "component": "ProductionInfrastructure",
+      "title": "In-Memory Fallback Auto-Switching Circuit (Node #5)",
+      "action": "Disconnect MONGO_URI and execute scan",
+      "expected_outcome": "Seamless fallback to mock engine with zero crash",
+      "severity": "High"
+    },
+    {
+      "id": "TC-DB-043",
+      "category": "Database Resiliency & Failover",
+      "component": "ProductionInfrastructure",
+      "title": "ACID Document Write Atomicity Verification (Node #5)",
+      "action": "Execute multi-document scan insertion",
+      "expected_outcome": "All scan records committed atomically",
+      "severity": "High"
+    },
+    {
+      "id": "TC-DB-044",
+      "category": "Database Resiliency & Failover",
+      "component": "ProductionInfrastructure",
+      "title": "Indexed Collection Query Execution Plan (Node #5)",
+      "action": "Inspect explain() on scans.created_at index",
+      "expected_outcome": "Query uses B-Tree index scan; zero COLLSCAN",
+      "severity": "High"
+    },
+    {
+      "id": "TC-DB-045",
+      "category": "Database Resiliency & Failover",
+      "component": "ProductionInfrastructure",
+      "title": "TTL Index Automatic History Retention Purge (Node #5)",
+      "action": "Test 90-day retention cleanup rule",
+      "expected_outcome": "Expired temporary records purged on schedule",
+      "severity": "High"
+    },
+    {
+      "id": "TC-DB-046",
+      "category": "Database Resiliency & Failover",
+      "component": "ProductionInfrastructure",
+      "title": "Connection Pool Max Connections Throttling (Node #5)",
+      "action": "Simulate 200 simultaneous DB clients",
+      "expected_outcome": "Connection pool manages 50 pooled sockets",
+      "severity": "High"
+    },
+    {
+      "id": "TC-DB-047",
+      "category": "Database Resiliency & Failover",
+      "component": "ProductionInfrastructure",
+      "title": "BSON Document Size Safety Enforcement (Node #5)",
+      "action": "Attempt insertion of 18MB media document",
+      "expected_outcome": "Document rejected gracefully at boundary",
+      "severity": "High"
+    },
+    {
+      "id": "TC-DB-048",
+      "category": "Database Resiliency & Failover",
+      "component": "ProductionInfrastructure",
+      "title": "Encrypted Data at Rest (AES-256 GCM) (Node #5)",
+      "action": "Audit database volume encryption status",
+      "expected_outcome": "Atlas cluster volume encrypted at rest",
+      "severity": "High"
+    },
+    {
+      "id": "TC-DB-049",
+      "category": "Database Resiliency & Failover",
+      "component": "ProductionInfrastructure",
+      "title": "Automated Nightly Snapshot Backup Safety (Node #5)",
+      "action": "Trigger cloud backup restore rehearsal",
+      "expected_outcome": "Database restored to point-in-time in 4.2m",
+      "severity": "High"
+    },
+    {
+      "id": "TC-DB-050",
+      "category": "Database Resiliency & Failover",
+      "component": "ProductionInfrastructure",
+      "title": "Database Audit Log Immutability Verification (Node #5)",
+      "action": "Inspect security audit log trail",
+      "expected_outcome": "Append-only security log prevents tampering",
+      "severity": "High"
+    }
+  ]
+}
