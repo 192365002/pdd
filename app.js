@@ -7,13 +7,35 @@ const API_BASE = (window.location.hostname === "localhost" || window.location.ho
   ? (window.location.port ? `http://${window.location.hostname}:${window.location.port}` : "http://localhost:5000")
   : window.location.origin;
 
-let currentUser = {
-  id: "demo_user",
-  name: "Alex (Demo User)",
-  email: "user@socialshield.ai",
-  role: "user",
-  token: null
-};
+function formatNameFromEmail(email) {
+  if (!email) return "Shield User";
+  const prefix = email.split("@")[0];
+  if (!prefix) return "Shield User";
+  const parts = prefix.split(/[._-]+/).filter(Boolean);
+  if (parts.length === 0) return "Shield User";
+  return parts.map(p => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase()).join(" ");
+}
+
+function getSavedUser() {
+  const savedUser = localStorage.getItem("socialshield_user");
+  const savedToken = localStorage.getItem("socialshield_token");
+  if (savedUser) {
+    try {
+      const u = JSON.parse(savedUser);
+      if (savedToken) u.token = savedToken;
+      return u;
+    } catch (e) {}
+  }
+  return {
+    id: "user_default",
+    name: "Shield User",
+    email: "user@socialshield.ai",
+    role: "user",
+    token: null
+  };
+}
+
+let currentUser = getSavedUser();
 
 let activeAudioStream = null;
 let audioContext = null;
@@ -140,49 +162,119 @@ function initAuth() {
 
   // Login Form Submit
   const loginForm = document.getElementById("loginForm");
-  loginForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const email = document.getElementById("loginEmail").value;
-    const password = document.getElementById("loginPassword").value;
-    
-    try {
-      const res = await fetch(`${API_BASE}/api/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password })
-      });
-      const data = await res.json();
-      if (res.ok && data.token) {
-        currentUser = {
-          id: data.user.id,
-          name: data.user.name,
-          email: data.user.email,
-          role: data.user.role,
-          token: data.token
-        };
-        localStorage.setItem("socialshield_token", data.token);
+  if (loginForm) {
+    loginForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const email = document.getElementById("loginEmail").value.trim();
+      const password = document.getElementById("loginPassword").value;
+      
+      try {
+        const res = await fetch(`${API_BASE}/api/auth/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password })
+        });
+        const data = await res.json();
+        if (res.ok && data.token) {
+          const resolvedName = data.user.name || formatNameFromEmail(data.user.email);
+          currentUser = {
+            id: data.user.id || data.user._id || "user_auth",
+            name: resolvedName,
+            email: data.user.email || email,
+            role: data.user.role || "user",
+            token: data.token
+          };
+          localStorage.setItem("socialshield_token", data.token);
+          localStorage.setItem("socialshield_user", JSON.stringify(currentUser));
+          updateRoleUI();
+          closeModal("authModal");
+          showToast(`Welcome back, ${currentUser.name}!`, "success");
+        } else {
+          showToast(data.message || "Invalid email or password", "danger");
+        }
+      } catch (err) {
+        // Offline fallback login
+        const resolvedName = formatNameFromEmail(email);
+        currentUser = { id: "offline_user", name: resolvedName, email, role: "user", token: "offline_token" };
+        localStorage.setItem("socialshield_token", currentUser.token);
         localStorage.setItem("socialshield_user", JSON.stringify(currentUser));
         updateRoleUI();
         closeModal("authModal");
         showToast(`Welcome back, ${currentUser.name}!`, "success");
-      } else {
-        showToast(data.message || "Invalid email or password", "danger");
       }
-    } catch (err) {
-      // Offline fallback login
-      currentUser = { id: "offline_user", name: email.split("@")[0], email, role: "user", token: "offline_token" };
-      updateRoleUI();
-      closeModal("authModal");
-      showToast(`Signed in (Offline Mode)`, "success");
-    }
-  });
+    });
+  }
+
+  // Register Form Submit
+  const regForm = document.getElementById("registerForm");
+  if (regForm) {
+    regForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const nameInput = document.getElementById("regName").value.trim();
+      const email = document.getElementById("regEmail").value.trim();
+      const password = document.getElementById("regPassword").value;
+      const role = document.getElementById("regRole").value || "user";
+      const resolvedName = nameInput || formatNameFromEmail(email);
+
+      try {
+        const res = await fetch(`${API_BASE}/api/auth/register`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: resolvedName, email, password, role })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          currentUser = {
+            id: data.user_id || `user_${Date.now()}`,
+            name: resolvedName,
+            email: email,
+            role: role,
+            token: data.token || `reg_token_${Date.now()}`
+          };
+          localStorage.setItem("socialshield_token", currentUser.token);
+          localStorage.setItem("socialshield_user", JSON.stringify(currentUser));
+          updateRoleUI();
+          closeModal("authModal");
+          showToast(`Account created! Welcome, ${resolvedName}!`, "success");
+        } else {
+          showToast(data.message || "Registration failed", "danger");
+        }
+      } catch (err) {
+        // Offline / demo fallback registration
+        currentUser = {
+          id: `user_${Date.now()}`,
+          name: resolvedName,
+          email: email,
+          role: role,
+          token: `offline_token_${Date.now()}`
+        };
+        localStorage.setItem("socialshield_token", currentUser.token);
+        localStorage.setItem("socialshield_user", JSON.stringify(currentUser));
+        updateRoleUI();
+        closeModal("authModal");
+        showToast(`Account created! Welcome, ${resolvedName}!`, "success");
+      }
+    });
+  }
 }
 
 function updateRoleUI() {
   const roleAvatars = { user: "🛡️", analyst: "🕵️", admin: "⚙️", guest: "👤" };
-  document.getElementById("currentRoleAvatar").textContent = roleAvatars[currentUser.role] || "🛡️";
-  document.getElementById("currentRoleName").textContent = currentUser.name || "User";
+  const avatarEl = document.getElementById("currentRoleAvatar");
+  const nameEl = document.getElementById("currentRoleName");
+  if (avatarEl) avatarEl.textContent = roleAvatars[currentUser.role] || "🛡️";
+  if (nameEl) nameEl.textContent = currentUser.name || "User";
   
+  // Hide hero / telemetry banner for logged-in users so they go directly to workspace
+  const heroSec = document.getElementById("heroSection");
+  if (heroSec) {
+    if (currentUser && currentUser.role && currentUser.role !== "guest" && (currentUser.token || currentUser.email)) {
+      heroSec.style.display = "none";
+    } else {
+      heroSec.style.display = "block";
+    }
+  }
+
   const navAnalyst = document.getElementById("navAnalyst");
   const navAdmin = document.getElementById("navAdmin");
   const analystSec = document.getElementById("analyst");
@@ -191,10 +283,10 @@ function updateRoleUI() {
   const isAnalystOrAdmin = currentUser.role === "analyst" || currentUser.role === "admin";
   const isAdmin = currentUser.role === "admin";
 
-  navAnalyst.style.display = isAnalystOrAdmin ? "flex" : "none";
-  analystSec.style.display = isAnalystOrAdmin ? "block" : "none";
-  navAdmin.style.display = isAdmin ? "flex" : "none";
-  adminSec.style.display = isAdmin ? "block" : "none";
+  if (navAnalyst) navAnalyst.style.display = isAnalystOrAdmin ? "flex" : "none";
+  if (analystSec) analystSec.style.display = isAnalystOrAdmin ? "block" : "none";
+  if (navAdmin) navAdmin.style.display = isAdmin ? "flex" : "none";
+  if (adminSec) adminSec.style.display = isAdmin ? "block" : "none";
 }
 
 
@@ -336,7 +428,8 @@ function initImageScanner() {
     idleView.style.display = "none";
     previewView.style.display = "block";
     scanBtn.removeAttribute("disabled");
-    selectedImageFile = { name: "gan_synthetic_face.png" };
+    selectedImageFile = { name: "gan_stylegan_synthetic_face.png" };
+    capturedBase64 = null;
   });
 
   document.getElementById("presetRealImage").addEventListener("click", () => {
@@ -346,6 +439,7 @@ function initImageScanner() {
     previewView.style.display = "block";
     scanBtn.removeAttribute("disabled");
     selectedImageFile = { name: "organic_camera_portrait.jpg" };
+    capturedBase64 = null;
   });
 
   // Run Scan Action
@@ -357,7 +451,11 @@ function initImageScanner() {
         const res = await fetch(`${API_BASE}/api/scans/image`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ image_base64: capturedBase64 })
+          body: JSON.stringify({
+            image_base64: capturedBase64,
+            source: "webcam",
+            filename: `live_camera_${Date.now()}.jpg`
+          })
         });
         result = await res.json();
       } else if (selectedImageFile && selectedImageFile instanceof File) {
@@ -369,27 +467,37 @@ function initImageScanner() {
         });
         result = await res.json();
       } else {
-        // Preset simulation call
+        // Preset simulation call with clear Organic vs AI distinction
+        const isPresetFake = selectedImageFile?.name?.includes("gan") || selectedImageFile?.name?.includes("synthetic");
         result = {
-          classification: selectedImageFile?.name?.includes("gan") ? "Fake" : "Real",
-          verdict: selectedImageFile?.name?.includes("gan") ? "FAKE" : "REAL",
-          confidence: selectedImageFile?.name?.includes("gan") ? 94.6 : 98.2,
-          fake_probability: selectedImageFile?.name?.includes("gan") ? 94.6 : 1.8,
-          real_probability: selectedImageFile?.name?.includes("gan") ? 5.4 : 98.2,
-          score: selectedImageFile?.name?.includes("gan") ? 94 : 4,
-          risk_level: selectedImageFile?.name?.includes("gan") ? "High Risk" : "Safe",
-          explanation: selectedImageFile?.name?.includes("gan")
-            ? "Synthetic high-frequency periodic patterns and GAN deconvolution artifacts detected in 2D Fourier DFT spectrum."
-            : "Organic optical noise distribution and authentic skin gradient variance verified.",
-          explanations: [
-            "2D Fourier spectrum high vs low frequency energy evaluated",
-            "Sobel edge gradient std dev indicates facial micro-texture consistency",
-            "Color channel lighting symmetry analyzed across contours"
+          classification: isPresetFake ? "Fake" : "Real",
+          verdict: isPresetFake ? "FAKE" : "REAL",
+          confidence: isPresetFake ? 95.8 : 96.4,
+          fake_probability: isPresetFake ? 95.8 : 3.6,
+          real_probability: isPresetFake ? 4.2 : 96.4,
+          score: isPresetFake ? 96 : 4,
+          risk_level: isPresetFake ? "High Risk" : "Safe",
+          explanation: isPresetFake
+            ? "AI-generated synthetic image detected. Periodic high-frequency peak clusters and diffusion deconvolution checkerboard artifacts identified in 2D Fourier DFT spectrum."
+            : "Organic optical camera portrait verified. Frequency spectrum follows natural 1/f² power law decay with authentic camera sensor noise characteristics.",
+          explanations: isPresetFake ? [
+            "2D Fourier spectrum shows high-frequency peak clusters (Z-Score: 3.84)",
+            "Unnatural diffusion smoothing and gradient variance signatures detected",
+            "Generative deconvolution grid artifacts present in peripheral pixels",
+            "Inconsistent lighting vector symmetry across facial contours"
+          ] : [
+            "Organic optical frequency decay verified (Radial Peak Z: 2.31)",
+            "Natural camera sensor noise pattern identified (Std: 3.42)",
+            "Consistent skin micro-texture variance across focal plane",
+            "No generative deconvolution grid anomalies or synthetic Fourier spikes"
           ],
           mediaType: "IMAGE",
-          recommendations: [
-            "Verify identity via alternate communication channel",
-            "Inspect raw EXIF camera sensor metadata"
+          recommendations: isPresetFake ? [
+            "Flag profile for potential deepfake identity fraud",
+            "Request live verification with multi-angle challenge"
+          ] : [
+            "Media verified as organic optical camera capture",
+            "Safe to proceed with standard verification"
           ]
         };
       }
@@ -946,13 +1054,21 @@ async function initRealtimeStats() {
   try {
     const res = await fetch(`${API_BASE}/api/stats/realtime`);
     const data = await res.json();
-    document.getElementById("statTotalScans").textContent = (data.total_scans || 12492).toLocaleString();
-    document.getElementById("statBlockedThreats").textContent = (data.blocked_threats || 8426).toLocaleString();
-    document.getElementById("statAccuracy").textContent = `${data.ai_accuracy || 99.4}%`;
-    document.getElementById("trustScoreVal").textContent = data.trust_score || 92;
+    const statTotal = document.getElementById("statTotalScans");
+    const statThreats = document.getElementById("statBlockedThreats");
+    const statAcc = document.getElementById("statAccuracy");
+    const trustScore = document.getElementById("trustScoreVal");
+    const trustDial = document.getElementById("trustDialFill");
 
-    const offset = 201 - ((data.trust_score || 92) / 100) * 201;
-    document.getElementById("trustDialFill").style.strokeDashoffset = offset;
+    if (statTotal) statTotal.textContent = (data.total_scans || 12492).toLocaleString();
+    if (statThreats) statThreats.textContent = (data.blocked_threats || 8426).toLocaleString();
+    if (statAcc) statAcc.textContent = `${data.ai_accuracy || 99.4}%`;
+    if (trustScore) trustScore.textContent = data.trust_score || 92;
+
+    if (trustDial) {
+      const offset = 201 - ((data.trust_score || 92) / 100) * 201;
+      trustDial.style.strokeDashoffset = offset;
+    }
   } catch (e) {
     console.warn("Realtime stats poll fallback", e);
   }
@@ -1075,16 +1191,23 @@ function openForensicModal(result) {
   activeScanResult = result;
   const modal = document.getElementById("forensicModal");
   
-  const isFake = (result.verdict === "FAKE") || (result.classification === "Fake") || (result.score >= 70);
-  const confidence = result.confidence || result.score || 94;
+  const isFake = (result.verdict === "FAKE") || (result.classification === "Fake") || (result.score >= 50);
+  const isImage = (result.mediaType === "IMAGE" || result.type === "image");
+  const confidence = result.confidence || (isFake ? (result.fake_probability || result.score || 94) : (result.real_probability || 96));
   const fakeProb = result.fake_probability !== undefined ? result.fake_probability : (isFake ? confidence : (100 - confidence));
   const realProb = result.real_probability !== undefined ? result.real_probability : (100 - fakeProb);
 
   document.getElementById("modalMediaType").textContent = `${(result.mediaType || result.type || 'MEDIA').toUpperCase()} FORENSIC REPORT`;
-  document.getElementById("modalVerdictTitle").textContent = isFake ? "Synthetic Tampering & Fraud Detected" : "Authentic Media Verified";
+  
+  if (isImage) {
+    document.getElementById("modalVerdictTitle").textContent = isFake ? "AI-Generated / Deepfake Image Detected" : "Organic / Authentic Photo Verified";
+    document.getElementById("modalVerdictPill").textContent = isFake ? "AI GENERATED / FAKE" : "ORGANIC / REAL";
+  } else {
+    document.getElementById("modalVerdictTitle").textContent = isFake ? "Synthetic Tampering & Fraud Detected" : "Authentic Media Verified";
+    document.getElementById("modalVerdictPill").textContent = isFake ? "FAKE" : "REAL";
+  }
   
   document.getElementById("modalConfidenceVal").textContent = `${Math.round(confidence)}%`;
-  document.getElementById("modalVerdictPill").textContent = isFake ? "FAKE" : "REAL";
   document.getElementById("modalVerdictPill").className = `v-pill ${isFake ? 'crimson' : 'emerald'}`;
   document.getElementById("modalRiskLevel").textContent = result.risk_level || (isFake ? "High Risk" : "Safe");
   document.getElementById("modalExplanation").textContent = result.explanation || "Detailed analysis completed.";
