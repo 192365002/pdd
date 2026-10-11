@@ -154,13 +154,52 @@ h1, h2, h3, h4 {
   border-radius: 50%;
   background: var(--neon-emerald);
   box-shadow: 0 0 8px var(--neon-emerald);
+  transition: all 0.3s ease;
 }
+.status-indicator.online {
+  background: var(--neon-emerald);
+  box-shadow: 0 0 8px var(--neon-emerald);
+}
+.status-indicator.slow {
+  background: var(--neon-amber);
+  box-shadow: 0 0 8px var(--neon-amber);
+}
+.status-indicator.offline {
+  background: var(--neon-crimson);
+  box-shadow: 0 0 8px var(--neon-crimson);
+}
+
 .latency-badge {
   background: rgba(0, 212, 255, 0.1);
   color: var(--neon-cyan);
   padding: 2px 6px;
   border-radius: 4px;
   font-size: 11px;
+}
+
+/* ── Navigation Network Latency Indicator ── */
+.nav-network-status {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: rgba(13, 22, 44, 0.75);
+  border: 1px solid var(--border-subtle);
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  cursor: default;
+  transition: var(--transition-fast);
+}
+.nav-network-status:hover {
+  border-color: rgba(0, 212, 255, 0.3);
+  background: rgba(13, 22, 44, 0.95);
+}
+.nav-network-status .latency-badge {
+  background: transparent;
+  padding: 0;
+  font-weight: 600;
+  color: var(--neon-cyan);
 }
 
 /* ── Live Pulse Dot ── */
@@ -330,6 +369,42 @@ h1, h2, h3, h4 {
   color: var(--text-dim);
 }
 
+.persona-dropdown-header {
+  padding: 6px 10px 4px;
+  font-size: 9px;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--neon-cyan);
+  letter-spacing: 0.08em;
+  border-bottom: 1px solid var(--border-subtle);
+  margin-bottom: 4px;
+}
+
+.standard-user-card {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  margin-bottom: 4px;
+}
+.standard-user-card .suc-role {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--neon-cyan);
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+.standard-user-card .suc-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+}
+.standard-user-card .suc-email {
+  font-size: 11px;
+  color: var(--text-dim);
+  word-break: break-all;
+}
+
 .btn-auth {
   background: rgba(0, 212, 255, 0.1);
   border: 1px solid var(--border-subtle);
@@ -344,6 +419,20 @@ h1, h2, h3, h4 {
 .btn-auth:hover {
   background: var(--neon-cyan);
   color: #04070D;
+}
+.btn-auth.signed-in {
+  background: rgba(255, 59, 59, 0.12);
+  border-color: rgba(255, 59, 59, 0.35);
+  color: #ff6b6b;
+}
+.btn-auth.signed-in:hover {
+  background: var(--neon-crimson);
+  border-color: var(--neon-crimson);
+  color: #ffffff;
+  box-shadow: 0 0 12px rgba(255, 59, 59, 0.35);
+}
+.text-crimson {
+  color: var(--neon-crimson) !important;
 }
 
 /* ── Hero Section ── */
@@ -1796,6 +1885,98 @@ h1, h2, h3, h4 {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+.auth-link-forgot {
+  font-size: 11px;
+  color: var(--neon-cyan);
+  text-decoration: none;
+  font-weight: 500;
+  transition: var(--transition-fast);
+}
+.auth-link-forgot:hover {
+  text-decoration: underline;
+  color: #fff;
+}
+.auth-back-link {
+  font-size: 12px;
+  color: var(--text-dim);
+  text-decoration: none;
+  display: inline-block;
+  margin-top: 10px;
+  transition: var(--transition-fast);
+}
+.auth-back-link:hover {
+  color: var(--neon-cyan);
+}
+
+/* Password Visibility Toggle */
+.password-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.password-input-wrapper input {
+  width: 100%;
+  padding-right: 42px !important;
+}
+
+.password-toggle-btn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-dim, #7e8ba3);
+  transition: color var(--transition-fast), transform var(--transition-fast), background var(--transition-fast);
+  border-radius: 6px;
+  z-index: 2;
+  user-select: none;
+  line-height: 1;
+}
+
+.password-toggle-btn:hover {
+  color: var(--neon-cyan, #00d4ff);
+  background: rgba(0, 212, 255, 0.12);
+  transform: translateY(-50%) scale(1.05);
+}
+
+.password-toggle-btn.showing {
+  color: var(--neon-cyan, #00d4ff);
+}
+
+.password-toggle-btn:focus-visible {
+  outline: 2px solid var(--neon-cyan, #00d4ff);
+  outline-offset: 1px;
+}
+
+.password-toggle-btn svg {
+  display: block;
+  pointer-events: none;
+  stroke: currentColor;
+}
+.otp-display-banner {
+  background: rgba(0, 212, 255, 0.08);
+  border: 1px dashed var(--neon-cyan);
+  border-radius: 8px;
+  padding: 10px 14px;
+  text-align: center;
+  margin-bottom: 14px;
+}
+.otp-display-code {
+  font-family: var(--font-mono);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 6px;
+  color: var(--neon-cyan);
+  display: block;
 }
 .auth-quick-access {
   margin-top: 14px;

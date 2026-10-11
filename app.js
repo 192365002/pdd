@@ -16,11 +16,45 @@ function formatNameFromEmail(email) {
   return parts.map(p => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase()).join(" ");
 }
 
-function isAadarshUser(user) {
+const OWNER_EMAIL = "aadarshavula2005@gmail.com";
+
+function isOwnerUser(user) {
   if (!user) return false;
   const email = (user.email || "").toLowerCase().trim();
-  const name = (user.name || "").toLowerCase().trim();
-  return email === "aadarshavula2005@gmail.com" || email.includes("aadarsh") || name.includes("aadarsh");
+  return email === OWNER_EMAIL;
+}
+
+function isAadarshUser(user) {
+  return isOwnerUser(user);
+}
+
+function escapeHtml(str) {
+  if (str === null || str === undefined) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function getAuthHeaders(extra = {}) {
+  const headers = { ...extra };
+  if (currentUser) {
+    if (currentUser.token) {
+      headers["Authorization"] = `Bearer ${currentUser.token}`;
+    }
+    if (currentUser.email) {
+      headers["X-User-Email"] = currentUser.email;
+    }
+    if (currentUser.name) {
+      headers["X-User-Name"] = currentUser.name;
+    }
+    if (currentUser.id) {
+      headers["X-User-Id"] = currentUser.id;
+    }
+  }
+  return headers;
 }
 
 function getSavedUser() {
@@ -29,17 +63,13 @@ function getSavedUser() {
   if (savedUser) {
     try {
       const u = JSON.parse(savedUser);
-      // If previous default placeholder was saved, upgrade to Aadarsh
-      if (u.name === "Shield User" || u.name === "Demo User" || u.email === "user@socialshield.ai") {
-        u.name = "Aadarsh";
-        u.email = "aadarshavula2005@gmail.com";
-        u.role = "admin";
-        u.token = "token_aadarsh_executive_2026";
-        localStorage.setItem("socialshield_user", JSON.stringify(u));
-        localStorage.setItem("socialshield_token", u.token);
+      if (u) {
+        if (u.role === "guest") return u;
+        if (u.email) {
+          if (savedToken) u.token = savedToken;
+          return u;
+        }
       }
-      if (savedToken) u.token = savedToken;
-      return u;
     } catch (e) {}
   }
   const defaultAadarsh = {
@@ -82,6 +112,7 @@ const REGIONS = [
 document.addEventListener("DOMContentLoaded", () => {
   initAuth();
   initNavigation();
+  initNetworkLatencyMonitor();
   initScannerTabs();
   initImageScanner();
   initAudioOscilloscope();
@@ -127,9 +158,21 @@ function initAuth() {
     personaDropdown.classList.remove("open");
   });
 
-  // Switch persona options
-  document.querySelectorAll(".persona-opt").forEach(opt => {
+  const dropdownSignInBtn = document.getElementById("dropdownSignInBtn");
+  if (dropdownSignInBtn) {
+    dropdownSignInBtn.addEventListener("click", () => {
+      personaDropdown.classList.remove("open");
+      openModal("authModal");
+    });
+  }
+
+  // Switch persona options (Strictly for owner mail)
+  document.querySelectorAll("#ownerPersonaList .persona-opt").forEach(opt => {
     opt.addEventListener("click", () => {
+      if (!isOwnerUser(currentUser)) {
+        showToast("Persona switching is restricted to the administrator/owner.", "danger");
+        return;
+      }
       const role = opt.dataset.role;
       const email = opt.dataset.email;
       const name = opt.dataset.name;
@@ -147,37 +190,42 @@ function initAuth() {
       else localStorage.removeItem("socialshield_token");
 
       updateRoleUI();
+      if (window.reloadScanHistory) window.reloadScanHistory();
       showToast(`Switched persona to ${name}`, "success");
       
-      if (role === 'analyst' || role === 'admin') loadSocThreats();
-      if (role === 'admin') loadAdminData();
+      if (role === 'analyst' || isOwnerUser(currentUser)) loadSocThreats();
+      if (isOwnerUser(currentUser)) loadAdminData();
     });
   });
 
-  // 1-Click Quick logins in Auth Modal
-  document.querySelectorAll(".btn-persona-quick").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const role = btn.dataset.login;
-      const map = {
-        aadarsh: { name: "Aadarsh", email: "aadarshavula2005@gmail.com", role: "admin" },
-        user: { name: "New User", email: "newuser@socialshield.ai", role: "user" },
-        analyst: { name: "Threat Analyst", email: "analyst@socialshield.ai", role: "analyst" },
-        admin: { name: "Security Admin", email: "admin@socialshield.ai", role: "admin" }
-      };
-      const info = map[role] || map.aadarsh;
-      currentUser = {
-        id: `user_${role}`,
-        name: info.name,
-        email: info.email,
-        role: role,
-        token: `mock_jwt_token_${role}_2026`
-      };
-      localStorage.setItem("socialshield_user", JSON.stringify(currentUser));
-      localStorage.setItem("socialshield_token", currentUser.token);
-      updateRoleUI();
-      closeModal("authModal");
-      showToast(`Signed in as ${info.name}`, "success");
-    });
+  // ─── Password Visibility Toggle (See / Hide Password) ──────
+  document.addEventListener("click", (e) => {
+    const btn = e.target.closest(".password-toggle-btn");
+    if (!btn) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const targetId = btn.getAttribute("data-target");
+    const input = document.getElementById(targetId);
+    if (!input) return;
+
+    const eyeShow = btn.querySelector(".eye-show");
+    const eyeHide = btn.querySelector(".eye-hide");
+
+    if (input.type === "password") {
+      input.type = "text";
+      if (eyeShow) eyeShow.style.display = "none";
+      if (eyeHide) eyeHide.style.display = "block";
+      btn.setAttribute("aria-label", "Hide password");
+      btn.title = "Hide Password";
+      btn.classList.add("showing");
+    } else {
+      input.type = "password";
+      if (eyeShow) eyeShow.style.display = "block";
+      if (eyeHide) eyeHide.style.display = "none";
+      btn.setAttribute("aria-label", "Show password");
+      btn.title = "Show Password";
+      btn.classList.remove("showing");
+    }
   });
 
   // Login Form Submit
@@ -207,6 +255,7 @@ function initAuth() {
           localStorage.setItem("socialshield_token", data.token);
           localStorage.setItem("socialshield_user", JSON.stringify(currentUser));
           updateRoleUI();
+          if (window.reloadScanHistory) window.reloadScanHistory();
           closeModal("authModal");
           showToast(`Welcome back, ${currentUser.name}!`, "success");
         } else {
@@ -219,6 +268,7 @@ function initAuth() {
         localStorage.setItem("socialshield_token", currentUser.token);
         localStorage.setItem("socialshield_user", JSON.stringify(currentUser));
         updateRoleUI();
+        if (window.reloadScanHistory) window.reloadScanHistory();
         closeModal("authModal");
         showToast(`Welcome back, ${currentUser.name}!`, "success");
       }
@@ -254,6 +304,7 @@ function initAuth() {
           localStorage.setItem("socialshield_token", currentUser.token);
           localStorage.setItem("socialshield_user", JSON.stringify(currentUser));
           updateRoleUI();
+          if (window.reloadScanHistory) window.reloadScanHistory();
           closeModal("authModal");
           showToast(`Account created! Welcome, ${resolvedName}!`, "success");
         } else {
@@ -271,6 +322,7 @@ function initAuth() {
         localStorage.setItem("socialshield_token", currentUser.token);
         localStorage.setItem("socialshield_user", JSON.stringify(currentUser));
         updateRoleUI();
+        if (window.reloadScanHistory) window.reloadScanHistory();
         closeModal("authModal");
         showToast(`Account created! Welcome, ${resolvedName}!`, "success");
       }
@@ -278,22 +330,94 @@ function initAuth() {
   }
 }
 
+function isUserSignedIn() {
+  return !!(currentUser && currentUser.role !== "guest" && currentUser.email);
+}
+
+function signOutUser() {
+  currentUser = {
+    id: "guest",
+    name: "Guest",
+    email: "",
+    role: "guest",
+    token: null
+  };
+  localStorage.setItem("socialshield_user", JSON.stringify(currentUser));
+  localStorage.removeItem("socialshield_token");
+  updateRoleUI();
+  if (window.reloadScanHistory) window.reloadScanHistory();
+  showToast("You have been signed out.", "info");
+}
+
 function updateRoleUI() {
   const roleAvatars = { user: "🛡️", analyst: "🕵️", admin: "⚙️", guest: "👤" };
   const avatarEl = document.getElementById("currentRoleAvatar");
   const nameEl = document.getElementById("currentRoleName");
-  const isAadarsh = isAadarshUser(currentUser);
+  const userBadge = document.getElementById("historyUserBadge");
+  const isOwner = isOwnerUser(currentUser);
 
-  if (avatarEl) avatarEl.textContent = isAadarsh ? "🛡️" : (roleAvatars[currentUser.role] || "🛡️");
-  if (nameEl) nameEl.textContent = isAadarsh ? "Aadarsh" : (currentUser.name || "User");
+  if (avatarEl) avatarEl.textContent = isOwner ? "🛡️" : (roleAvatars[currentUser.role] || "🛡️");
+  if (nameEl) nameEl.textContent = isOwner ? "Aadarsh" : (currentUser.name || "User");
   
+  if (userBadge && currentUser) {
+    userBadge.innerHTML = `👤 Audit Logs: <strong>${escapeHtml(currentUser.name || 'User')}</strong> (${escapeHtml(currentUser.email || '')})`;
+  }
+
+  // Restrict Persona Switcher: Visible ONLY for owner mail (aadarshavula2005@gmail.com)
+  const ownerPersonaList = document.getElementById("ownerPersonaList");
+  const standardUserInfo = document.getElementById("standardUserInfo");
+  const guestPromptCard = document.getElementById("guestPromptCard");
+  const dropdownUserName = document.getElementById("dropdownUserName");
+  const dropdownUserEmail = document.getElementById("dropdownUserEmail");
+  const dropdownUserRoleTitle = document.getElementById("dropdownUserRoleTitle");
+
+  if (ownerPersonaList) {
+    ownerPersonaList.style.display = isOwner ? "block" : "none";
+  }
+
+  if (standardUserInfo) {
+    if (!isOwner && isUserSignedIn()) {
+      standardUserInfo.style.display = "block";
+      if (dropdownUserName) dropdownUserName.textContent = currentUser.name || "User";
+      if (dropdownUserEmail) dropdownUserEmail.textContent = currentUser.email || "";
+      if (dropdownUserRoleTitle) {
+        const roleLabels = { user: "Standard User", analyst: "Threat Analyst", admin: "Security Admin" };
+        dropdownUserRoleTitle.textContent = (roleLabels[currentUser.role] || currentUser.role || "Standard User").toUpperCase();
+      }
+    } else {
+      standardUserInfo.style.display = "none";
+    }
+  }
+
+  if (guestPromptCard) {
+    guestPromptCard.style.display = (!isOwner && !isUserSignedIn()) ? "block" : "none";
+  }
+  
+  // Update Auth Button (Sign In vs Sign Out)
+  const authBtn = document.getElementById("openAuthModalBtn");
+  const dropdownSignOut = document.getElementById("dropdownSignOutOpt");
+  if (authBtn) {
+    if (isUserSignedIn()) {
+      authBtn.textContent = "Sign Out";
+      authBtn.classList.add("signed-in");
+      authBtn.title = `Signed in as ${currentUser.name || currentUser.email}. Click to sign out.`;
+    } else {
+      authBtn.textContent = "Sign In";
+      authBtn.classList.remove("signed-in");
+      authBtn.title = "Click to sign in or register";
+    }
+  }
+  if (dropdownSignOut) {
+    dropdownSignOut.style.display = isUserSignedIn() ? "flex" : "none";
+  }
+
   // Exclusively give this metrics ribbon bar to Aadarsh (aadarshavula2005@gmail.com)
   // Remove this for all other / new logins
   const heroIntro = document.getElementById("heroIntroBanner");
   const heroSec = document.getElementById("heroSection");
   
   if (heroSec) {
-    if (isAadarsh) {
+    if (isOwner) {
       heroSec.style.display = "block";
       heroSec.classList.add("compact-telemetry-mode");
       if (heroIntro) heroIntro.style.display = "none";
@@ -302,18 +426,47 @@ function updateRoleUI() {
     }
   }
 
+  const navMap = document.getElementById("navMap");
   const navAnalyst = document.getElementById("navAnalyst");
   const navAdmin = document.getElementById("navAdmin");
+  const mapSec = document.getElementById("map");
   const analystSec = document.getElementById("analyst");
   const adminSec = document.getElementById("admin");
+  const adminTelemetryCard = document.getElementById("adminTelemetryCard");
+  const adminUsersCard = document.getElementById("adminUsersCard");
   
-  const isAnalystOrAdmin = isAadarsh || currentUser.role === "analyst" || currentUser.role === "admin";
-  const isAdmin = isAadarsh || currentUser.role === "admin";
+  const isAnalystOrAdmin = isOwner || currentUser.role === "analyst";
+  // Admin privileges, details, and Cyber Threat Radar Map are strictly exclusive to Aadarsh (aadarshavula2005@gmail.com)
+  const isAdmin = isOwner;
+
+  // Live Cyber Threat Radar Map: visible ONLY for Admin (Aadarsh)
+  if (navMap) navMap.style.display = isAdmin ? "flex" : "none";
+  if (mapSec) mapSec.style.display = isAdmin ? "block" : "none";
 
   if (navAnalyst) navAnalyst.style.display = isAnalystOrAdmin ? "flex" : "none";
   if (analystSec) analystSec.style.display = isAnalystOrAdmin ? "block" : "none";
+  
   if (navAdmin) navAdmin.style.display = isAdmin ? "flex" : "none";
   if (adminSec) adminSec.style.display = isAdmin ? "block" : "none";
+  if (adminTelemetryCard) adminTelemetryCard.style.display = isAdmin ? "block" : "none";
+  if (adminUsersCard) adminUsersCard.style.display = isAdmin ? "block" : "none";
+
+  if (isAdmin) {
+    loadAdminData();
+  } else {
+    const adminTbody = document.getElementById("adminUsersTbody");
+    if (adminTbody) adminTbody.innerHTML = "";
+    // If the active nav was map or admin, reset active state to scanner
+    const activeNav = document.querySelector(".nav-link.active");
+    if (activeNav) {
+      const activeTarget = activeNav.getAttribute("data-nav");
+      if (activeTarget === "map" || activeTarget === "admin") {
+        activeNav.classList.remove("active");
+        const scannerNav = document.querySelector('[data-nav="scanner"]');
+        if (scannerNav) scannerNav.classList.add("active");
+      }
+    }
+  }
 }
 
 
@@ -323,7 +476,18 @@ function updateRoleUI() {
 function initNavigation() {
   const links = document.querySelectorAll(".nav-link");
   links.forEach(link => {
-    link.addEventListener("click", () => {
+    link.addEventListener("click", (e) => {
+      const targetNav = link.getAttribute("data-nav");
+      if (targetNav === "admin" && !isOwnerUser(currentUser)) {
+        e.preventDefault();
+        showToast("Admin Center is restricted to owner (Aadarsh).", "warning");
+        return;
+      }
+      if (targetNav === "map" && !isOwnerUser(currentUser)) {
+        e.preventDefault();
+        showToast("Cyber Threat Radar Map is restricted to Admin (Aadarsh).", "warning");
+        return;
+      }
       links.forEach(l => l.classList.remove("active"));
       link.classList.add("active");
     });
@@ -477,11 +641,13 @@ function initImageScanner() {
       if (capturedBase64) {
         const res = await fetch(`${API_BASE}/api/scans/image`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: getAuthHeaders({ "Content-Type": "application/json" }),
           body: JSON.stringify({
             image_base64: capturedBase64,
             source: "webcam",
-            filename: `live_camera_${Date.now()}.jpg`
+            filename: `live_camera_${Date.now()}.jpg`,
+            user_email: currentUser?.email,
+            user_name: currentUser?.name
           })
         });
         result = await res.json();
@@ -489,8 +655,11 @@ function initImageScanner() {
         const formData = new FormData();
         formData.append("image", selectedImageFile);
         formData.append("source", selectedImageFile.name.toLowerCase().includes("organic") ? "organic" : "upload");
+        if (currentUser?.email) formData.append("user_email", currentUser.email);
+        if (currentUser?.name) formData.append("user_name", currentUser.name);
         const res = await fetch(`${API_BASE}/api/scans/image`, {
           method: "POST",
+          headers: getAuthHeaders(),
           body: formData
         });
         result = await res.json();
@@ -503,11 +672,13 @@ function initImageScanner() {
         try {
           const res = await fetch(`${API_BASE}/api/scans/image`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: getAuthHeaders({ "Content-Type": "application/json" }),
             body: JSON.stringify({
               preset: isPresetReal ? "organic" : "synthetic",
               filename: fname || (isPresetReal ? "organic_camera_portrait.jpg" : "gan_stylegan_synthetic_face.png"),
-              source: isPresetReal ? "preset_organic" : "synthetic"
+              source: isPresetReal ? "preset_organic" : "synthetic",
+              user_email: currentUser?.email,
+              user_name: currentUser?.name
             })
           });
           if (res.ok) {
@@ -552,7 +723,7 @@ function initImageScanner() {
         }
       }
       openForensicModal(result);
-      initHistory();
+      if (window.reloadScanHistory) window.reloadScanHistory();
     } catch (err) {
       showToast("Error processing image scan", "danger");
     } finally {
@@ -692,19 +863,24 @@ function initAudioOscilloscope() {
         if (hasAudioFile) {
           const formData = new FormData();
           formData.append("audio", fileInput.files[0]);
+          if (currentUser?.email) formData.append("user_email", currentUser.email);
+          if (currentUser?.name) formData.append("user_name", currentUser.name);
           const res = await fetch(`${API_BASE}/api/scans/audio`, {
             method: "POST",
+            headers: getAuthHeaders(),
             body: formData
           });
           if (res.ok) result = await res.json();
         } else {
           const res = await fetch(`${API_BASE}/api/scans/audio`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: getAuthHeaders({ "Content-Type": "application/json" }),
             body: JSON.stringify({
               preset: isPresetReal ? "authentic" : (isPresetAi ? "synthetic" : ""),
               filename: selectedName.textContent || (isPresetReal ? "authentic_human_speech.wav" : "elevenlabs_neural_voice_clone.wav"),
-              audio_base64: "UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA="
+              audio_base64: "UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=",
+              user_email: currentUser?.email,
+              user_name: currentUser?.name
             })
           });
           if (res.ok) result = await res.json();
@@ -745,7 +921,7 @@ function initAudioOscilloscope() {
         };
       }
       openForensicModal(result);
-      initHistory();
+      if (window.reloadScanHistory) window.reloadScanHistory();
     } catch (err) {
       showToast("Error analyzing audio", "danger");
     } finally {
@@ -809,18 +985,23 @@ function initVideoScanner() {
         if (hasVideoFile) {
           const formData = new FormData();
           formData.append("video", fileInput.files[0]);
+          if (currentUser?.email) formData.append("user_email", currentUser.email);
+          if (currentUser?.name) formData.append("user_name", currentUser.name);
           const res = await fetch(`${API_BASE}/api/scans/video`, {
             method: "POST",
+            headers: getAuthHeaders(),
             body: formData
           });
           if (res.ok) result = await res.json();
         } else {
           const res = await fetch(`${API_BASE}/api/scans/video`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: getAuthHeaders({ "Content-Type": "application/json" }),
             body: JSON.stringify({
               preset: isReal ? "organic" : (isFake ? "deepfake" : ""),
-              filename: filenameLabel.textContent || (isFake ? "deepfake_faceswap_video.mp4" : "authentic_interview_clip.mp4")
+              filename: filenameLabel.textContent || (isFake ? "deepfake_faceswap_video.mp4" : "authentic_interview_clip.mp4"),
+              user_email: currentUser?.email,
+              user_name: currentUser?.name
             })
           });
           if (res.ok) result = await res.json();
@@ -861,7 +1042,7 @@ function initVideoScanner() {
         };
       }
       openForensicModal(result);
-      initHistory();
+      if (window.reloadScanHistory) window.reloadScanHistory();
     } catch (err) {
       showToast("Error analyzing video frames", "danger");
     } finally {
@@ -905,8 +1086,12 @@ function initTextNLPScanner() {
     try {
       const res = await fetch(`${API_BASE}/api/scans/text`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text })
+        headers: getAuthHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify({
+          text,
+          user_email: currentUser?.email,
+          user_name: currentUser?.name
+        })
       });
       const data = await res.json();
       updateKeystrokeMeter(data.score, data.risk_level, data.details?.matched_tokens || data.details?.scam_keywords);
@@ -958,12 +1143,16 @@ function initTextNLPScanner() {
     try {
       const res = await fetch(`${API_BASE}/api/scans/text`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: textInput.value || "Sample verification" })
+        headers: getAuthHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify({
+          text: textInput.value || "Sample verification",
+          user_email: currentUser?.email,
+          user_name: currentUser?.name
+        })
       });
       const data = await res.json();
       openForensicModal(data);
-      initHistory();
+      if (window.reloadScanHistory) window.reloadScanHistory();
     } catch (err) {
       showToast("Error completing text scan", "danger");
     } finally {
@@ -988,8 +1177,12 @@ function initUrlScanner() {
     try {
       const res = await fetch(`${API_BASE}/api/scans/url`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url })
+        headers: getAuthHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify({
+          url,
+          user_email: currentUser?.email,
+          user_name: currentUser?.name
+        })
       });
       const data = await res.json();
       
@@ -1000,7 +1193,7 @@ function initUrlScanner() {
       deceptionVal.style.color = (data.details?.flags?.length || 0) > 0 ? "var(--neon-crimson)" : "var(--neon-emerald)";
 
       openForensicModal(data);
-      initHistory();
+      if (window.reloadScanHistory) window.reloadScanHistory();
     } catch (err) {
       showToast("Error inspecting URL", "danger");
     }
@@ -1047,18 +1240,20 @@ function initProfileScanner() {
       followers: parseInt(document.getElementById("profFollowers").value) || 0,
       following: parseInt(document.getElementById("profFollowing").value) || 0,
       account_age_days: parseInt(document.getElementById("profAge").value) || 30,
-      bio: document.getElementById("profBio").value || ""
+      bio: document.getElementById("profBio").value || "",
+      user_email: currentUser?.email,
+      user_name: currentUser?.name
     };
 
     try {
       const res = await fetch(`${API_BASE}/api/scans/profile`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify(payload)
       });
       const data = await res.json();
       openForensicModal(data);
-      initHistory();
+      if (window.reloadScanHistory) window.reloadScanHistory();
     } catch (err) {
       showToast("Error analyzing social profile", "danger");
     } finally {
@@ -1096,25 +1291,60 @@ function initCyberMap() {
 
 
 // ═════════════════════════════════════════════════════════════════
-// 10. SERVER-SENT EVENTS (SSE) LIVE THREAT STREAM
+// 10. REAL-TIME NETWORK LATENCY & LIVE THREAT STREAM
 // ═════════════════════════════════════════════════════════════════
+async function measureNetworkLatency() {
+  const latencyBadge = document.getElementById("latencyBadge");
+  const netDot = document.getElementById("netStatusDot");
+  if (!latencyBadge) return;
+
+  const t0 = performance.now();
+  try {
+    const res = await fetch(`${API_BASE}/health?ping=${Date.now()}`, { cache: "no-store" });
+    const rtt = Math.max(1, Math.round(performance.now() - t0));
+    if (res.ok) {
+      latencyBadge.textContent = `${rtt} ms`;
+      if (netDot) {
+        if (rtt < 120) {
+          netDot.className = "status-indicator online";
+        } else {
+          netDot.className = "status-indicator slow";
+        }
+      }
+      const teleLatency = document.getElementById("teleLatency");
+      if (teleLatency) teleLatency.textContent = `${rtt} ms`;
+    } else {
+      latencyBadge.textContent = `${rtt} ms`;
+      if (netDot) netDot.className = "status-indicator slow";
+    }
+  } catch (err) {
+    latencyBadge.textContent = "Offline";
+    if (netDot) netDot.className = "status-indicator offline";
+  }
+}
+
+function initNetworkLatencyMonitor() {
+  measureNetworkLatency();
+  setInterval(measureNetworkLatency, 3500);
+}
+
 function initThreatStream() {
   const streamList = document.getElementById("incidentStreamList");
   const sseStatus = document.getElementById("sseStatus");
-  const latencyBadge = document.getElementById("latencyBadge");
 
   let eventSource = null;
 
   try {
     eventSource = new EventSource(`${API_BASE}/api/stream/threats`);
     eventSource.onopen = () => {
-      sseStatus.textContent = "STREAM LIVE";
-      sseStatus.className = "status-text text-emerald";
+      if (sseStatus) {
+        sseStatus.textContent = "STREAM LIVE";
+        sseStatus.className = "status-text text-emerald";
+      }
     };
     eventSource.onmessage = (e) => {
       const incident = JSON.parse(e.data);
       addIncidentToFeed(incident);
-      latencyBadge.textContent = `${Math.floor(Math.random() * 20 + 25)}ms`;
     };
     eventSource.onerror = () => {
       eventSource.close();
@@ -1125,6 +1355,7 @@ function initThreatStream() {
   }
 
   function addIncidentToFeed(inc) {
+    if (!streamList) return;
     const item = document.createElement("div");
     item.className = `stream-item ${inc.severity.toLowerCase() === 'critical' ? 'critical' : ''}`;
     item.innerHTML = `
@@ -1140,7 +1371,7 @@ function initThreatStream() {
   }
 
   function startFallbackIncidentStream() {
-    sseStatus.textContent = "SIMULATED TELEMETRY";
+    if (sseStatus) sseStatus.textContent = "SIMULATED TELEMETRY";
     setInterval(() => {
       const regions = ["North America", "Europe", "South Asia", "East Asia", "Latin America", "Middle East"];
       const types = ["Voice Clone Impersonation", "GAN Deepfake Avatar", "SSO Phishing Campaign", "Social Media Botnet Spike"];
@@ -1154,7 +1385,6 @@ function initThreatStream() {
         target: "Targeted Verification Node",
         timestamp: new Date().toLocaleTimeString()
       });
-      latencyBadge.textContent = `${Math.floor(Math.random() * 15 + 30)}ms`;
     }, 4000);
   }
 }
@@ -1237,19 +1467,28 @@ window.triageThreat = async function(id, status) {
 };
 
 async function loadAdminData() {
+  if (!isOwnerUser(currentUser)) {
+    const tbody = document.getElementById("adminUsersTbody");
+    if (tbody) tbody.innerHTML = "";
+    return;
+  }
   try {
-    const res = await fetch(`${API_BASE}/api/admin/users`);
+    const res = await fetch(`${API_BASE}/api/admin/users`, {
+      headers: getAuthHeaders()
+    });
     const data = await res.json();
     const tbody = document.getElementById("adminUsersTbody");
-    tbody.innerHTML = (data.users || []).map(u => `
-      <tr>
-        <td>${u.name || 'User'}</td>
-        <td>${u.email}</td>
-        <td><span class="status-badge ${u.role === 'admin' ? 'resolved' : 'investigating'}">${(u.role || 'user').toUpperCase()}</span></td>
-        <td>${u.is_verified ? '✅ Verified' : '⏳ Pending'}</td>
-        <td><button class="btn-outline" style="padding:3px 8px; font-size:11px;">Manage</button></td>
-      </tr>
-    `).join("");
+    if (tbody) {
+      tbody.innerHTML = (data.users || []).map(u => `
+        <tr>
+          <td>${escapeHtml(u.name || 'User')}</td>
+          <td>${escapeHtml(u.email || '')}</td>
+          <td><span class="status-badge ${u.role === 'admin' ? 'resolved' : 'investigating'}">${(u.role || 'user').toUpperCase()}</span></td>
+          <td>${u.is_verified ? '✅ Verified' : '⏳ Pending'}</td>
+          <td><button class="btn-outline" style="padding:3px 8px; font-size:11px;">Manage</button></td>
+        </tr>
+      `).join("");
+    }
   } catch (e) {
     console.warn("Admin data load fallback");
   }
@@ -1257,23 +1496,59 @@ async function loadAdminData() {
 
 
 // ═════════════════════════════════════════════════════════════════
-// 13. SCAN HISTORY
+// 13. SCAN HISTORY (STRICT PER-USER ISOLATION)
 // ═════════════════════════════════════════════════════════════════
 let cachedHistoryScans = [];
 
 async function initHistory() {
   const tbody = document.getElementById("historyTbody");
   const refreshBtn = document.getElementById("refreshHistoryBtn");
+  const userBadge = document.getElementById("historyUserBadge");
   
   async function loadHistory() {
+    if (!tbody) return;
+    const userEmail = (currentUser?.email || "aadarshavula2005@gmail.com").trim().toLowerCase();
+    const userName = (currentUser?.name || "Aadarsh").trim();
+    
+    if (userBadge) {
+      userBadge.innerHTML = `👤 Audit Logs: <strong>${escapeHtml(userName)}</strong> (${escapeHtml(userEmail)})`;
+      userBadge.title = `Viewing isolated audit trail for account: ${userEmail}`;
+    }
+    
     try {
-      const res = await fetch(`${API_BASE}/api/scans/history`);
+      const queryParams = new URLSearchParams({
+        email: userEmail,
+        name: userName
+      });
+      if (currentUser?.id) queryParams.set("user_id", currentUser.id);
+
+      const res = await fetch(`${API_BASE}/api/scans/history?${queryParams.toString()}`, {
+        headers: getAuthHeaders()
+      });
       const data = await res.json();
       cachedHistoryScans = data.scans || [];
+      
+      if (cachedHistoryScans.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6" style="text-align:center; padding: 36px 20px; color: var(--text-dim);">
+              <div style="font-size:32px; margin-bottom:10px;">🛡️</div>
+              <div style="font-size:14px; font-weight:600; color:var(--text-bright); margin-bottom:4px;">
+                No Prior Scans Found for ${escapeHtml(userName)}
+              </div>
+              <div style="font-size:12px; max-width:460px; margin:0 auto; opacity:0.8;">
+                Account: <code>${escapeHtml(userEmail)}</code>. Run any Text, URL, Image, Audio, or Video scan above to generate your private forensics trail.
+              </div>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
       tbody.innerHTML = cachedHistoryScans.map((s, idx) => `
         <tr>
           <td><span class="badge-type">${(s.type || 'IMAGE').toUpperCase()}</span></td>
-          <td>${s.input?.length > 40 ? s.input.substring(0, 40) + '...' : (s.input || 'Sample Input')}</td>
+          <td title="${escapeHtml(s.input || '')}">${s.input?.length > 40 ? escapeHtml(s.input.substring(0, 40)) + '...' : escapeHtml(s.input || 'Sample Input')}</td>
           <td><strong>${s.score || 0}/100</strong></td>
           <td><span class="verdict-tag ${(s.verdict || (s.score > 70 ? 'FAKE' : 'REAL')).toLowerCase()}">${s.verdict || (s.score > 70 ? 'FAKE' : 'REAL')}</span></td>
           <td style="font-family:var(--font-mono); font-size:11px; color:var(--text-dim);">${s.created_at ? new Date(s.created_at).toLocaleTimeString() : 'Recent'}</td>
@@ -1283,14 +1558,19 @@ async function initHistory() {
         </tr>
       `).join("");
     } catch (e) {
-      console.warn("History fallback", e);
+      console.warn("History fetch fallback", e);
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:20px; color:var(--neon-crimson);">⚠️ Failed to load scan history for ${escapeHtml(userEmail)}. Click refresh to retry.</td></tr>`;
     }
   }
 
-  refreshBtn.addEventListener("click", () => {
-    loadHistory();
-    showToast("Audit history refreshed", "success");
-  });
+  window.reloadScanHistory = loadHistory;
+
+  if (refreshBtn) {
+    refreshBtn.addEventListener("click", () => {
+      loadHistory();
+      showToast(`Refreshed audit history for ${currentUser?.email || 'user'}`, "success");
+    });
+  }
 
   loadHistory();
 }
@@ -1388,28 +1668,214 @@ function initModals() {
     showToast("Forensic report downloaded successfully", "success");
   });
 
-  // Auth Modal
-  document.getElementById("openAuthModalBtn").addEventListener("click", () => openModal("authModal"));
+  // Auth Modal & Sign In / Sign Out Actions
+  const openAuthModalBtn = document.getElementById("openAuthModalBtn");
+  if (openAuthModalBtn) {
+    openAuthModalBtn.addEventListener("click", () => {
+      if (isUserSignedIn()) {
+        signOutUser();
+      } else {
+        openModal("authModal");
+      }
+    });
+  }
+
+  const dropdownSignOutOpt = document.getElementById("dropdownSignOutOpt");
+  if (dropdownSignOutOpt) {
+    dropdownSignOutOpt.addEventListener("click", () => {
+      const personaDropdown = document.getElementById("personaDropdown");
+      if (personaDropdown) personaDropdown.classList.remove("open");
+      signOutUser();
+    });
+  }
+
   document.getElementById("closeAuthModalBtn").addEventListener("click", () => closeModal("authModal"));
+
+  const openMobileBtn = document.getElementById("openMobileModalBtn");
+  const closeMobileBtn = document.getElementById("closeMobileModalBtn");
+  if (openMobileBtn) {
+    openMobileBtn.addEventListener("click", () => openModal("mobileModal"));
+  }
+  if (closeMobileBtn) {
+    closeMobileBtn.addEventListener("click", () => closeModal("mobileModal"));
+  }
 
   const tabLogin = document.getElementById("tabLogin");
   const tabRegister = document.getElementById("tabRegister");
   const loginForm = document.getElementById("loginForm");
   const regForm = document.getElementById("registerForm");
+  const forgotForm = document.getElementById("forgotForm");
+  const forgotPasswordLink = document.getElementById("forgotPasswordLink");
+  const backToSignInLink = document.getElementById("backToSignInLink");
+  const forgotStepRequest = document.getElementById("forgotStepRequest");
+  const forgotStepVerify = document.getElementById("forgotStepVerify");
+  const sendResetCodeBtn = document.getElementById("sendResetCodeBtn");
+  const forgotEmail = document.getElementById("forgotEmail");
+  const authTabs = document.querySelector(".auth-tabs");
 
-  tabLogin.addEventListener("click", () => {
-    tabLogin.classList.add("active");
-    tabRegister.classList.remove("active");
-    loginForm.style.display = "flex";
-    regForm.style.display = "none";
-  });
+  function showSignInView() {
+    if (authTabs) authTabs.style.display = "flex";
+    if (tabLogin) tabLogin.classList.add("active");
+    if (tabRegister) tabRegister.classList.remove("active");
+    if (loginForm) loginForm.style.display = "flex";
+    if (regForm) regForm.style.display = "none";
+    if (forgotForm) forgotForm.style.display = "none";
+    if (forgotStepRequest) forgotStepRequest.style.display = "block";
+    if (forgotStepVerify) forgotStepVerify.style.display = "none";
+  }
 
-  tabRegister.addEventListener("click", () => {
-    tabRegister.classList.add("active");
-    tabLogin.classList.remove("active");
-    regForm.style.display = "flex";
-    loginForm.style.display = "none";
-  });
+  function showForgotView() {
+    if (authTabs) authTabs.style.display = "none";
+    if (loginForm) loginForm.style.display = "none";
+    if (regForm) regForm.style.display = "none";
+    if (forgotForm) forgotForm.style.display = "flex";
+    if (forgotStepRequest) forgotStepRequest.style.display = "block";
+    if (forgotStepVerify) forgotStepVerify.style.display = "none";
+    const loginEmail = document.getElementById("loginEmail");
+    if (loginEmail && loginEmail.value.trim() && forgotEmail) {
+      forgotEmail.value = loginEmail.value.trim();
+    }
+    if (forgotEmail) forgotEmail.focus();
+  }
+
+  if (forgotPasswordLink) {
+    forgotPasswordLink.addEventListener("click", (e) => {
+      e.preventDefault();
+      showForgotView();
+    });
+  }
+
+  if (backToSignInLink) {
+    backToSignInLink.addEventListener("click", (e) => {
+      e.preventDefault();
+      showSignInView();
+    });
+  }
+
+  if (tabLogin) {
+    tabLogin.addEventListener("click", () => {
+      showSignInView();
+    });
+  }
+
+  if (tabRegister) {
+    tabRegister.addEventListener("click", () => {
+      if (authTabs) authTabs.style.display = "flex";
+      tabRegister.classList.add("active");
+      tabLogin.classList.remove("active");
+      regForm.style.display = "flex";
+      loginForm.style.display = "none";
+      if (forgotForm) forgotForm.style.display = "none";
+    });
+  }
+
+  let activeResetEmail = "";
+  if (sendResetCodeBtn) {
+    sendResetCodeBtn.addEventListener("click", async () => {
+      const email = forgotEmail.value.trim();
+      if (!email || !email.includes("@")) {
+        showToast("Please enter a valid registered email address.", "danger");
+        if (forgotEmail) forgotEmail.focus();
+        return;
+      }
+
+      sendResetCodeBtn.textContent = "Sending Verification Code...";
+      sendResetCodeBtn.setAttribute("disabled", "true");
+
+      try {
+        const res = await fetch(`${API_BASE}/api/auth/forgot-password`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email })
+        });
+        const data = await res.json();
+        
+        if (res.ok) {
+          activeResetEmail = email;
+          if (forgotStepRequest) forgotStepRequest.style.display = "none";
+          if (forgotStepVerify) forgotStepVerify.style.display = "block";
+          
+          showToast(`Verification code sent to ${email}! Please check your email inbox.`, "success");
+          
+          const codeInput = document.getElementById("forgotCode");
+          if (codeInput) {
+            codeInput.value = "";
+            codeInput.focus();
+          }
+        } else {
+          showToast(data.message || "Email address not found.", "danger");
+        }
+      } catch (err) {
+        showToast("Failed to reach server. Please check your network.", "danger");
+      } finally {
+        sendResetCodeBtn.textContent = "Send Verification Code";
+        sendResetCodeBtn.removeAttribute("disabled");
+      }
+    });
+  }
+
+  if (forgotForm) {
+    forgotForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const code = document.getElementById("forgotCode").value.trim();
+      const newPassword = document.getElementById("forgotNewPassword").value;
+      const confirmPassword = document.getElementById("forgotConfirmPassword").value;
+
+      if (!code) {
+        showToast("Please enter the 6-digit verification code.", "danger");
+        return;
+      }
+      if (newPassword.length < 6) {
+        showToast("New password must be at least 6 characters.", "danger");
+        return;
+      }
+      if (newPassword !== confirmPassword) {
+        showToast("Passwords do not match. Please verify.", "danger");
+        return;
+      }
+
+      const submitBtn = document.getElementById("submitResetPasswordBtn");
+      if (submitBtn) {
+        submitBtn.textContent = "Resetting Password...";
+        submitBtn.setAttribute("disabled", "true");
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/api/auth/reset-password`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: activeResetEmail || (forgotEmail ? forgotEmail.value.trim() : ""),
+            code: code,
+            password: newPassword
+          })
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+          showToast("Password reset successful! You can now sign in.", "success");
+          
+          // Pre-fill login credentials
+          const loginEmail = document.getElementById("loginEmail");
+          const loginPassword = document.getElementById("loginPassword");
+          if (loginEmail) loginEmail.value = activeResetEmail || (forgotEmail ? forgotEmail.value.trim() : "");
+          if (loginPassword) loginPassword.value = newPassword;
+          
+          // Switch back to login view
+          showSignInView();
+        } else {
+          showToast(data.message || "Failed to reset password. Please check your code.", "danger");
+        }
+      } catch (err) {
+        showToast("Network error. Please try again.", "danger");
+      } finally {
+        if (submitBtn) {
+          submitBtn.textContent = "Reset Password & Sign In";
+          submitBtn.removeAttribute("disabled");
+        }
+      }
+    });
+  }
 
   // Report Threat Modal
   const openReportThreatBtn = document.getElementById("openReportThreatModalBtn");
