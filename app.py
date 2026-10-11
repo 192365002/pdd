@@ -7,6 +7,9 @@ from flask import Flask, request, jsonify, send_from_directory, Response
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 from bson import ObjectId
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from models import get_db, init_db, is_mock
 import auth
@@ -59,15 +62,74 @@ def add_no_cache_headers(response):
     response.headers['Expires'] = '0'
     return response
 
-# Optional auth extractor (allows guest scanning or authenticated scanning)
+# User extractor supporting Bearer JWT, X-User headers, query params, and body data
 def get_current_user():
+    # 1. Bearer JWT
+    user = {}
     auth_header = request.headers.get('Authorization', '')
     if auth_header.startswith('Bearer '):
         token = auth_header.split(' ')[1]
         decoded = auth.decode_token(token)
         if 'error' not in decoded:
-            return decoded
-    return {'sub': 'user_aadarsh', 'role': 'admin', 'name': 'Aadarsh', 'email': 'aadarshavula2005@gmail.com'}
+            user = dict(decoded)
+            
+    # 2. Custom headers
+    hdr_email = request.headers.get('X-User-Email', '').strip().lower()
+    hdr_name = request.headers.get('X-User-Name', '').strip()
+    hdr_id = request.headers.get('X-User-Id', '').strip()
+    
+    # 3. Query params (e.g. /api/scans/history?email=...)
+    qp_email = request.args.get('email', '').strip().lower()
+    qp_name = request.args.get('name', '').strip()
+    qp_id = request.args.get('user_id', '').strip()
+    
+    # 4. Request payload (JSON or Form)
+    body_email = ''
+    body_name = ''
+    body_id = ''
+    if request.is_json:
+        try:
+            bdata = request.get_json(silent=True) or {}
+            body_email = str(bdata.get('user_email', '')).strip().lower()
+            body_name = str(bdata.get('user_name', '')).strip()
+            body_id = str(bdata.get('user_id', '')).strip()
+        except Exception:
+            pass
+    elif request.form:
+        body_email = request.form.get('user_email', '').strip().lower()
+        body_name = request.form.get('user_name', '').strip()
+        body_id = request.form.get('user_id', '').strip()
+
+    email = hdr_email or qp_email or body_email or user.get('email', '').strip().lower()
+    name = hdr_name or qp_name or body_name or user.get('name', '').strip()
+    user_id = hdr_id or qp_id or body_id or user.get('sub', '').strip()
+    role = user.get('role', 'user')
+
+    # If no email is specified at all, default to Aadarsh
+    if not email:
+        email = 'aadarshavula2005@gmail.com'
+        name = name or 'Aadarsh'
+        user_id = user_id or 'user_aadarsh'
+        role = 'admin'
+    else:
+        if 'aadarshavula2005@gmail.com' in email or 'aadarsh' in email:
+            name = name or 'Aadarsh'
+            user_id = user_id or 'user_aadarsh'
+            role = 'admin'
+        else:
+            if not name:
+                prefix = email.split('@')[0]
+                name = ' '.join(p.capitalize() for p in prefix.replace('.', ' ').replace('_', ' ').split())
+            if not user_id:
+                user_id = f"user_{email.replace('@', '_').replace('.', '_')}"
+
+    return {
+        'sub': user_id,
+        'user_id': user_id,
+        'email': email,
+        'name': name,
+        'role': role
+    }
 
 # ====================================================
 # DB SEEDING FOR PRODUCTION-READY INITIAL STATE
@@ -92,15 +154,18 @@ def seed_initial_data():
         users_col.update_one({'email': 'analyst@socialshield.ai'}, {'$set': {'is_verified': True}})
         users_col.update_one({'email': 'user@socialshield.ai'}, {'$set': {'is_verified': True}})
 
-    demo_user = users_col.find_one({'email': 'aadarshavula2005@gmail.com'}) or users_col.find_one({'email': 'user@socialshield.ai'})
+    demo_user = users_col.find_one({'email': 'aadarshavula2005@gmail.com'})
     user_id = str(demo_user['_id']) if demo_user else "user_aadarsh"
 
     # 2. Seed Scans if empty
     if scans_col.count_documents({}) == 0:
-        print("Seeding demo scan history...")
-        demo_scans = [
+        print("Seeding personalized demo scan history...")
+        # Aadarsh's initial scans
+        aadarsh_scans = [
             {
                 'user_id': user_id,
+                'user_email': 'aadarshavula2005@gmail.com',
+                'user_name': 'Aadarsh',
                 'type': 'text',
                 'input': 'Dear Customer, update your passcode at https://verify-paypal-login.xyz to avoid suspension.',
                 'score': 88,
@@ -112,6 +177,8 @@ def seed_initial_data():
             },
             {
                 'user_id': user_id,
+                'user_email': 'aadarshavula2005@gmail.com',
+                'user_name': 'Aadarsh',
                 'type': 'url',
                 'input': 'https://google.com',
                 'score': 10,
@@ -123,6 +190,8 @@ def seed_initial_data():
             },
             {
                 'user_id': user_id,
+                'user_email': 'aadarshavula2005@gmail.com',
+                'user_name': 'Aadarsh',
                 'type': 'image',
                 'input': 'ceo_profile_scanned.png',
                 'score': 94,
@@ -134,6 +203,8 @@ def seed_initial_data():
             },
             {
                 'user_id': user_id,
+                'user_email': 'aadarshavula2005@gmail.com',
+                'user_name': 'Aadarsh',
                 'type': 'audio',
                 'input': 'executive_voicemail_urgent.wav',
                 'score': 91,
@@ -145,6 +216,8 @@ def seed_initial_data():
             },
             {
                 'user_id': user_id,
+                'user_email': 'aadarshavula2005@gmail.com',
+                'user_name': 'Aadarsh',
                 'type': 'text',
                 'input': 'Hey! Are we still meeting for lunch at 12:30 PM today?',
                 'score': 5,
@@ -156,6 +229,8 @@ def seed_initial_data():
             },
             {
                 'user_id': user_id,
+                'user_email': 'aadarshavula2005@gmail.com',
+                'user_name': 'Aadarsh',
                 'type': 'url',
                 'input': 'http://secure-update-banking-portal.net',
                 'score': 78,
@@ -166,8 +241,46 @@ def seed_initial_data():
                 'created_at': _utcnow() - datetime.timedelta(hours=6)
             }
         ]
-        for scan in demo_scans:
+        for scan in aadarsh_scans:
             scans_col.insert_one(scan)
+
+        # Demo user distinct scans
+        demo_user_scans = [
+            {
+                'user_id': 'user_demo',
+                'user_email': 'user@socialshield.ai',
+                'user_name': 'Alex Demo User',
+                'type': 'text',
+                'input': 'USPS Alert: Package tracking #93821 on hold. Verify details at http://usps-redelivery-portal.info',
+                'score': 82,
+                'risk_level': 'High Risk',
+                'verdict': 'FAKE',
+                'confidence': 82.0,
+                'explanation': 'Contains postal delivery phishing markers and unverified domain.',
+                'created_at': _utcnow() - datetime.timedelta(days=2)
+            },
+            {
+                'user_id': 'user_demo',
+                'user_email': 'user@socialshield.ai',
+                'user_name': 'Alex Demo User',
+                'type': 'url',
+                'input': 'https://github.com',
+                'score': 8,
+                'risk_level': 'Safe',
+                'verdict': 'REAL',
+                'confidence': 92.0,
+                'explanation': 'Legitimate SSL-encrypted code repository platform.',
+                'created_at': _utcnow() - datetime.timedelta(days=1)
+            }
+        ]
+        for scan in demo_user_scans:
+            scans_col.insert_one(scan)
+    else:
+        # Tag any legacy unassigned scans to Aadarsh
+        scans_col.update_many(
+            {'$or': [{'user_email': {'$exists': False}}, {'user_email': None}, {'user_email': ''}]},
+            {'$set': {'user_email': 'aadarshavula2005@gmail.com', 'user_name': 'Aadarsh', 'user_id': 'user_aadarsh'}}
+        )
 
     # 3. Seed Threat Reports if empty
     if threats_col.count_documents({}) == 0:
@@ -377,6 +490,40 @@ def login():
         
     return jsonify(result), 200
 
+@app.route('/api/auth/forgot-password', methods=['POST'])
+@rate_limit(30, 60)
+def forgot_password():
+    data = request.get_json() or {}
+    email = data.get('email', '').strip().lower()
+    if not email:
+        return jsonify({'message': 'Email address is required.'}), 400
+        
+    result = auth.forgot_password_request(email)
+    if 'error' in result:
+        return jsonify({'message': result['error']}), 404
+        
+    return jsonify(result), 200
+
+@app.route('/api/auth/reset-password', methods=['POST'])
+@rate_limit(30, 60)
+def reset_password():
+    data = request.get_json() or {}
+    email = data.get('email', '').strip().lower()
+    code = data.get('code', '').strip()
+    new_password = data.get('password', '')
+    
+    if not email or not code or not new_password:
+        return jsonify({'message': 'Email, verification code, and new password are required.'}), 400
+        
+    if len(new_password) < 6:
+        return jsonify({'message': 'Password must be at least 6 characters long.'}), 400
+        
+    result = auth.reset_password_with_code(email, code, new_password)
+    if 'error' in result:
+        return jsonify({'message': result['error']}), 400
+        
+    return jsonify(result), 200
+
 @app.route('/api/auth/me', methods=['GET'])
 @auth.token_required
 def get_profile():
@@ -402,7 +549,9 @@ def scan_text():
     
     db = get_db()
     scan_doc = {
-        'user_id': user['sub'],
+        'user_id': user.get('user_id', user['sub']),
+        'user_email': user.get('email', '').lower(),
+        'user_name': user.get('name', ''),
         'type': 'text',
         'input': content[:200] + ('...' if len(content) > 200 else ''),
         'score': result['score'],
@@ -419,6 +568,9 @@ def scan_text():
     _, _, recs = ai_engine.generate_overall_fraud_score([result])
     result['recommendations'] = recs
     result['mediaType'] = 'TEXT'
+    result['user_email'] = user.get('email', '').lower()
+    result['user_name'] = user.get('name', '')
+    result['user_id'] = user.get('user_id', user['sub'])
     
     return jsonify(result), 200
 
@@ -438,7 +590,9 @@ def scan_url():
     
     db = get_db()
     scan_doc = {
-        'user_id': user['sub'],
+        'user_id': user.get('user_id', user['sub']),
+        'user_email': user.get('email', '').lower(),
+        'user_name': user.get('name', ''),
         'type': 'url',
         'input': url,
         'score': result['score'],
@@ -455,6 +609,9 @@ def scan_url():
     _, _, recs = ai_engine.generate_overall_fraud_score([result])
     result['recommendations'] = recs
     result['mediaType'] = 'URL'
+    result['user_email'] = user.get('email', '').lower()
+    result['user_name'] = user.get('name', '')
+    result['user_id'] = user.get('user_id', user['sub'])
     
     return jsonify(result), 200
 
@@ -512,7 +669,9 @@ def scan_image():
     
     db = get_db()
     scan_doc = {
-        'user_id': user['sub'],
+        'user_id': user.get('user_id', user['sub']),
+        'user_email': user.get('email', '').lower(),
+        'user_name': user.get('name', ''),
         'type': 'image',
         'input': filename,
         'score': result['score'],
@@ -530,6 +689,9 @@ def scan_image():
     result['recommendations'] = recs
     result['image_url'] = f"/static/uploads/{filename}" if filepath else ""
     result['mediaType'] = 'IMAGE'
+    result['user_email'] = user.get('email', '').lower()
+    result['user_name'] = user.get('name', '')
+    result['user_id'] = user.get('user_id', user['sub'])
     
     return jsonify(result), 200
 
@@ -573,7 +735,9 @@ def scan_audio():
     
     db = get_db()
     scan_doc = {
-        'user_id': user['sub'],
+        'user_id': user.get('user_id', user['sub']),
+        'user_email': user.get('email', '').lower(),
+        'user_name': user.get('name', ''),
         'type': 'audio',
         'input': filename,
         'score': result['score'],
@@ -590,6 +754,9 @@ def scan_audio():
     _, _, recs = ai_engine.generate_overall_fraud_score([result])
     result['recommendations'] = recs
     result['mediaType'] = 'AUDIO'
+    result['user_email'] = user.get('email', '').lower()
+    result['user_name'] = user.get('name', '')
+    result['user_id'] = user.get('user_id', user['sub'])
     
     return jsonify(result), 200
 
@@ -633,7 +800,9 @@ def scan_video():
     
     db = get_db()
     scan_doc = {
-        'user_id': user['sub'],
+        'user_id': user.get('user_id', user['sub']),
+        'user_email': user.get('email', '').lower(),
+        'user_name': user.get('name', ''),
         'type': 'video',
         'input': filename,
         'score': result['score'],
@@ -650,6 +819,9 @@ def scan_video():
     _, _, recs = ai_engine.generate_overall_fraud_score([result])
     result['recommendations'] = recs
     result['mediaType'] = 'VIDEO'
+    result['user_email'] = user.get('email', '').lower()
+    result['user_name'] = user.get('name', '')
+    result['user_id'] = user.get('user_id', user['sub'])
     
     return jsonify(result), 200
 
@@ -665,7 +837,9 @@ def scan_profile():
     
     db = get_db()
     scan_doc = {
-        'user_id': user['sub'],
+        'user_id': user.get('user_id', user['sub']),
+        'user_email': user.get('email', '').lower(),
+        'user_name': user.get('name', ''),
         'type': 'profile',
         'input': f"@{data.get('username', 'user')}",
         'score': result['score'],
@@ -682,12 +856,15 @@ def scan_profile():
     _, _, recs = ai_engine.generate_overall_fraud_score([result])
     result['recommendations'] = recs
     result['mediaType'] = 'PROFILE'
+    result['user_email'] = user.get('email', '').lower()
+    result['user_name'] = user.get('name', '')
+    result['user_id'] = user.get('user_id', user['sub'])
     
     return jsonify(result), 200
 
 
 # ====================================================
-# HISTORY & ANALYTICS
+# HISTORY & ANALYTICS (STRICT PER-USER ISOLATION)
 # ====================================================
 
 @app.route('/api/scans/history', methods=['GET'])
@@ -695,20 +872,75 @@ def get_scan_history():
     user = get_current_user()
     db = get_db()
     
-    # Query scans for user or general public list
-    scans = list(db['scans'].find().sort('created_at', -1).limit(30))
+    current_email = (user.get('email') or '').lower().strip()
+    current_name = (user.get('name') or '').strip()
+    current_user_id = str(user.get('user_id') or user.get('sub') or '').strip()
+    
+    is_aadarsh = ('aadarshavula2005@gmail.com' in current_email) or ('aadarsh' in current_email)
+    
+    # Construct database query
+    filter_or = []
+    if current_email:
+        filter_or.append({'user_email': current_email})
+    if current_user_id:
+        filter_or.append({'user_id': current_user_id})
+    if current_name:
+        filter_or.append({'user_name': current_name})
+        
+    if is_aadarsh:
+        filter_or.append({'user_id': 'user_aadarsh'})
+        filter_or.append({'user_name': 'Aadarsh'})
+        
+    query = {'$or': filter_or} if filter_or else {'user_email': current_email}
+    raw_scans = list(db['scans'].find(query).sort('created_at', -1).limit(50))
+    
     formatted = []
-    for scan in scans:
+    for scan in raw_scans:
         scan_copy = dict(scan)
+        s_email = str(scan_copy.get('user_email', '')).lower().strip()
+        s_id = str(scan_copy.get('user_id', '')).strip()
+        s_name = str(scan_copy.get('user_name', '')).strip()
+        
+        # Rigorous isolation check: no user should see scans belonging to another user!
+        matches = False
+        if is_aadarsh:
+            if s_email == current_email or 'aadarsh' in s_email or s_id == 'user_aadarsh' or 'aadarsh' in s_name.lower():
+                matches = True
+            elif not s_email and s_id == current_user_id:
+                matches = True
+        else:
+            # Strictly ensure non-Aadarsh users NEVER receive Aadarsh's scans
+            if 'aadarsh' in s_email or s_id == 'user_aadarsh' or 'aadarsh' in s_name.lower():
+                matches = False
+            elif current_email and s_email == current_email:
+                matches = True
+            elif current_user_id and s_id == current_user_id:
+                matches = True
+            elif current_name and s_name.lower() == current_name.lower():
+                matches = True
+                
+        if not matches:
+            continue
+            
         scan_id = str(scan_copy.get('_id', scan_copy.get('id', 'scan_unknown')))
         if '_id' in scan_copy:
             del scan_copy['_id']
         scan_copy['id'] = scan_id
+        scan_copy['user_email'] = s_email or current_email
+        scan_copy['user_name'] = s_name or current_name
         if isinstance(scan_copy.get('created_at'), datetime.datetime):
             scan_copy['created_at'] = scan_copy['created_at'].isoformat()
         formatted.append(scan_copy)
         
-    return jsonify({'scans': formatted}), 200
+    return jsonify({
+        'scans': formatted,
+        'user': {
+            'email': current_email,
+            'name': current_name,
+            'user_id': current_user_id
+        },
+        'count': len(formatted)
+    }), 200
 
 @app.route('/api/scans/<scan_id>', methods=['GET'])
 def get_scan_by_id(scan_id):
@@ -790,6 +1022,9 @@ def admin_threats():
 
 @app.route('/api/admin/users', methods=['GET'])
 def admin_get_users():
+    user_email = (request.headers.get('X-User-Email') or '').lower().strip()
+    if user_email and user_email != 'aadarshavula2005@gmail.com':
+        return jsonify({'users': [], 'message': 'Access restricted to owner (aadarshavula2005@gmail.com).'}), 403
     db = get_db()
     users = list(db['users'].find({}, {'password': 0}))
     clean_users = []
@@ -805,6 +1040,9 @@ def admin_get_users():
 
 @app.route('/api/admin/system-health', methods=['GET'])
 def get_system_health():
+    user_email = (request.headers.get('X-User-Email') or '').lower().strip()
+    if user_email and user_email != 'aadarshavula2005@gmail.com':
+        return jsonify({'message': 'Access restricted to owner (aadarshavula2005@gmail.com).'}), 403
     import platform
     db = get_db()
     scans_col = db['scans']

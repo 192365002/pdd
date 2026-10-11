@@ -24,17 +24,48 @@ class MockCollection:
         self.data[doc['_id']] = doc
         return type('InsertResult', (), {'inserted_id': doc['_id']})()
 
+    def _match_doc(self, doc, filter_query):
+        if not filter_query:
+            return True
+        for k, v in filter_query.items():
+            if k == '$or':
+                if not any(self._match_doc(doc, sub) for sub in v):
+                    return False
+            elif k == '$and':
+                if not all(self._match_doc(doc, sub) for sub in v):
+                    return False
+            elif k == '_id':
+                v_str = str(v) if isinstance(v, ObjectId) else v
+                if doc.get('_id') != v_str:
+                    return False
+            elif isinstance(v, dict):
+                doc_val = doc.get(k)
+                for op, op_val in v.items():
+                    if op == '$in':
+                        if doc_val not in op_val:
+                            return False
+                    elif op == '$nin':
+                        if doc_val in op_val:
+                            return False
+                    elif op == '$ne':
+                        if doc_val == op_val:
+                            return False
+                    elif op == '$eq':
+                        if doc_val != op_val:
+                            return False
+                    elif op == '$exists':
+                        exists = (k in doc) and (doc.get(k) is not None)
+                        if exists != bool(op_val):
+                            return False
+            else:
+                if doc.get(k) != v:
+                    return False
+        return True
+
     def find_one(self, filter_query=None, projection=None, *args, **kwargs):
         filter_query = filter_query or {}
         for doc in self.data.values():
-            match = True
-            for k, v in filter_query.items():
-                if k == '_id' and isinstance(v, ObjectId):
-                    v = str(v)
-                if doc.get(k) != v:
-                    match = False
-                    break
-            if match:
+            if self._match_doc(doc, filter_query):
                 res = doc.copy()
                 if projection and isinstance(projection, dict):
                     for pk, pv in projection.items():
@@ -47,14 +78,7 @@ class MockCollection:
         filter_query = filter_query or {}
         results = []
         for doc in self.data.values():
-            match = True
-            for k, v in filter_query.items():
-                if k == '_id' and isinstance(v, ObjectId):
-                    v = str(v)
-                if doc.get(k) != v:
-                    match = False
-                    break
-            if match:
+            if self._match_doc(doc, filter_query):
                 res = doc.copy()
                 if projection and isinstance(projection, dict):
                     for pk, pv in projection.items():
@@ -96,6 +120,18 @@ class MockCollection:
         self.data[doc['_id']] = doc
         return type('UpdateResult', (), {'modified_count': 1, 'matched_count': 1})()
 
+    def update_many(self, filter_query, update_data):
+        modified = 0
+        for doc in list(self.data.values()):
+            if self._match_doc(doc, filter_query):
+                for op, data in update_data.items():
+                    if op == '$set':
+                        for k, v in data.items():
+                            doc[k] = v
+                self.data[doc['_id']] = doc
+                modified += 1
+        return type('UpdateResult', (), {'modified_count': modified, 'matched_count': modified})()
+
     def delete_one(self, filter_query):
         doc = self.find_one(filter_query)
         if doc:
@@ -107,12 +143,7 @@ class MockCollection:
         filter_query = filter_query or {}
         count = 0
         for doc in self.data.values():
-            match = True
-            for k, v in filter_query.items():
-                if doc.get(k) != v:
-                    match = False
-                    break
-            if match:
+            if self._match_doc(doc, filter_query):
                 count += 1
         return count
 
