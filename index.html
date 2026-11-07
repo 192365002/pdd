@@ -156,7 +156,7 @@
           Instant AI protection across <strong>Images</strong> (2D DFT Spectrum), <strong>Audio</strong> (Live Mic Voice
           Clone),
           <strong>Videos</strong> (Temporal Consistency), <strong>Text</strong> (Live Keystroke NLP),
-          <strong>URLs</strong>, and <strong>Social Profiles</strong>.
+          and <strong>Phishing URLs</strong>.
         </p>
       </div>
 
@@ -256,11 +256,6 @@
           <span class="tab-icon">🔗</span>
           <span class="tab-title">Phishing URL</span>
           <span class="tab-badge">Domain Forensics</span>
-        </button>
-        <button class="scan-tab" data-mode="profile">
-          <span class="tab-icon">👤</span>
-          <span class="tab-title">Social Profile</span>
-          <span class="tab-badge">Bot Likelihood</span>
         </button>
       </div>
 
@@ -669,65 +664,6 @@
                   </button>
                 </div>
               </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- ── TAB 6: SOCIAL PROFILE BOT SCANNER ── -->
-        <div class="scan-panel" id="panel-profile">
-          <div class="panel-layout">
-            <div class="profile-form-grid">
-              <div class="form-group">
-                <label>Username / Handle</label>
-                <input type="text" id="profUsername" placeholder="@crypto_promoter991" />
-              </div>
-              <div class="form-group">
-                <label>Followers Count</label>
-                <input type="number" id="profFollowers" placeholder="14" />
-              </div>
-              <div class="form-group">
-                <label>Following Count</label>
-                <input type="number" id="profFollowing" placeholder="1850" />
-              </div>
-              <div class="form-group">
-                <label>Account Age (Days)</label>
-                <input type="number" id="profAge" placeholder="5" />
-              </div>
-              <div class="form-group full-width">
-                <label>Account Bio / Description</label>
-                <textarea id="profBio" rows="2"
-                  placeholder="DM for crypto trading signals, 500% guaranteed return, whatsapp me now..."></textarea>
-              </div>
-            </div>
-
-            <div class="panel-side-controls">
-              <div class="side-info-card">
-                <h4>👤 Social Engineering Bot Detector</h4>
-                <p>Evaluates follower-to-following ratios, bot naming entropy, and financial solicitation trigger
-                  patterns in user bios.</p>
-              </div>
-
-              <div class="sample-presets">
-                <span class="presets-label">⚡ Test Presets:</span>
-                <div class="presets-grid">
-                  <button class="btn-preset danger" id="presetBotProfile">
-                    <span class="p-tag">BOT</span> Crypto Impersonator
-                  </button>
-                  <button class="btn-preset success" id="presetRealProfile">
-                    <span class="p-tag">REAL</span> Authentic Creator
-                  </button>
-                </div>
-              </div>
-
-              <button class="btn-scan-primary" id="executeProfileScanBtn">
-                <span class="btn-scan-content">
-                  <span class="scan-btn-icon">⚡</span>
-                  <span>Evaluate Bot Risk</span>
-                </span>
-                <span class="btn-scan-loading" style="display:none;">
-                  <span class="spinner-dot"></span> Scoring Profile Anomaly...
-                </span>
-              </button>
             </div>
           </div>
         </div>

@@ -2007,26 +2007,38 @@ function initUrlScanner() {
 
 
 // ═════════════════════════════════════════════════════════════════
-// 8. SOCIAL PROFILE BOT SCANNER
+// 8. SOCIAL PROFILE BOT SCANNER (REMOVED FROM UI)
 // ═════════════════════════════════════════════════════════════════
 function initProfileScanner() {
   const scanBtn = document.getElementById("executeProfileScanBtn");
+  if (!scanBtn) return;
   
   function populateProfile(username, followers, following, age, bio) {
-    document.getElementById("profUsername").value = username;
-    document.getElementById("profFollowers").value = followers;
-    document.getElementById("profFollowing").value = following;
-    document.getElementById("profAge").value = age;
-    document.getElementById("profBio").value = bio;
+    const elUser = document.getElementById("profUsername");
+    if (elUser) elUser.value = username;
+    const elFoll = document.getElementById("profFollowers");
+    if (elFoll) elFoll.value = followers;
+    const elFing = document.getElementById("profFollowing");
+    if (elFing) elFing.value = following;
+    const elAge = document.getElementById("profAge");
+    if (elAge) elAge.value = age;
+    const elBio = document.getElementById("profBio");
+    if (elBio) elBio.value = bio;
   }
 
-  document.getElementById("presetBotProfile").addEventListener("click", () => {
-    populateProfile("@crypto_pump_bot9912", 14, 1890, 4, "DM for 500% guaranteed weekly returns on crypto trading! Join telegram group now!");
-  });
+  const pBot = document.getElementById("presetBotProfile");
+  if (pBot) {
+    pBot.addEventListener("click", () => {
+      populateProfile("@crypto_pump_bot9912", 14, 1890, 4, "DM for 500% guaranteed weekly returns on crypto trading! Join telegram group now!");
+    });
+  }
 
-  document.getElementById("presetRealProfile").addEventListener("click", () => {
-    populateProfile("@sarah_designs", 2450, 420, 840, "UI/UX Designer & open source contributor. Building sleek web experiences in tech.");
-  });
+  const pReal = document.getElementById("presetRealProfile");
+  if (pReal) {
+    pReal.addEventListener("click", () => {
+      populateProfile("@sarah_designs", 2450, 420, 840, "UI/UX Designer & open source contributor. Building sleek web experiences in tech.");
+    });
+  }
 
   scanBtn.addEventListener("click", async () => {
     setButtonLoading(scanBtn, true);
