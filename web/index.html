@@ -50,15 +50,6 @@
         <a href="#scanner" class="nav-link active" data-nav="scanner">
           <span class="nav-icon">⚡</span> Scanner Hub
         </a>
-        <a href="#map" class="nav-link" data-nav="map" id="navMap">
-          <span class="nav-icon">🗺️</span> Cyber Threat Map
-        </a>
-        <a href="#analyst" class="nav-link" data-nav="analyst" id="navAnalyst">
-          <span class="nav-icon">🕵️</span> SOC War Room
-        </a>
-        <a href="#admin" class="nav-link" data-nav="admin" id="navAdmin">
-          <span class="nav-icon">⚙️</span> Admin Center
-        </a>
         <a href="#history" class="nav-link" data-nav="history">
           <span class="nav-icon">📜</span> History
         </a>
@@ -110,13 +101,6 @@
                   <div class="p-sub">SOC incident queue & threat triage</div>
                 </div>
               </div>
-              <div class="persona-opt" data-role="guest" data-email="" data-name="Guest Mode">
-                <span class="p-icon">🌐</span>
-                <div>
-                  <div class="p-title">Guest Mode</div>
-                  <div class="p-sub">Quick instant scan without login</div>
-                </div>
-              </div>
             </div>
 
             <!-- Standard User Profile Card (Shown for all other loginers) -->
@@ -126,15 +110,15 @@
               <div class="suc-email" id="dropdownUserEmail">user@domain.com</div>
             </div>
 
-            <!-- Guest Card (Shown when not logged in) -->
+            <!-- Auth Required Card (Shown when not logged in) -->
             <div id="guestPromptCard" style="display:none; padding: 12px 14px; text-align: center;">
-              <div style="font-size: 11px; text-transform: uppercase; color: var(--text-dim); margin-bottom: 4px; font-family: var(--font-mono);">Session Mode</div>
-              <div style="font-size: 13px; font-weight: 600; color: #fff; margin-bottom: 6px;">Guest User</div>
-              <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px;">Sign in to access forensic history and reports.</div>
-              <button type="button" class="btn-cyan full-width" style="padding: 6px 12px; font-size: 11px;" id="dropdownSignInBtn">Sign In</button>
+              <div style="font-size: 11px; text-transform: uppercase; color: var(--text-dim); margin-bottom: 4px; font-family: var(--font-mono);">Authentication Required</div>
+              <div style="font-size: 13px; font-weight: 600; color: #fff; margin-bottom: 6px;">Not Signed In</div>
+              <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px;">Sign in to access your security suite and forensic audits.</div>
+              <button type="button" class="btn-cyan full-width" style="padding: 6px 12px; font-size: 11px;" id="dropdownSignInBtn">Sign In to Account</button>
             </div>
 
-            <div class="persona-opt persona-signout-opt" id="dropdownSignOutOpt" style="display:none; border-top: 1px solid var(--border-subtle); margin-top: 4px; padding-top: 8px;">
+            <div class="persona-opt persona-signout-opt" id="dropdownSignOutOpt" onclick="signOutUser()" style="display:none; border-top: 1px solid var(--border-subtle); margin-top: 4px; padding-top: 8px; cursor: pointer;">
               <span class="p-icon">🚪</span>
               <div>
                 <div class="p-title text-crimson">Sign Out</div>
@@ -144,7 +128,7 @@
           </div>
         </div>
 
-        <button class="btn-auth" id="openAuthModalBtn">Sign In</button>
+        <button type="button" class="btn-auth" id="openAuthModalBtn" onclick="handleAuthBtnClick(event)">Sign In</button>
       </div>
     </div>
   </nav>
@@ -342,12 +326,12 @@
               <!-- Preset Sample Buttons -->
               <div class="sample-presets">
                 <span class="presets-label">⚡ One-Click Test Samples:</span>
-                <div class="presets-grid">
+                <div class="presets-grid" style="grid-template-columns: repeat(2, 1fr); gap: 8px;">
                   <button class="btn-preset danger" id="presetDeepfakeImage">
-                    <span class="p-tag">FAKE</span> StyleGAN Face
+                    <span class="p-tag">AI</span> AI-Generated Photo
                   </button>
                   <button class="btn-preset success" id="presetRealImage">
-                    <span class="p-tag">REAL</span> Organic Photo
+                    <span class="p-tag">REAL</span> Original Camera Photo
                   </button>
                 </div>
               </div>
@@ -355,12 +339,50 @@
               <button class="btn-scan-primary" id="executeImageScanBtn" disabled>
                 <span class="btn-scan-content">
                   <span class="scan-btn-icon">⚡</span>
-                  <span>Run Deepfake Inspection</span>
+                  <span>Analyze Image Authenticity</span>
                 </span>
                 <span class="btn-scan-loading" style="display:none;">
-                  <span class="spinner-dot"></span> Analyzing FFT Spectrum...
+                  <span class="spinner-dot"></span> Analyzing Pretrained Vision Model...
                 </span>
               </button>
+            </div>
+          </div>
+
+          <!-- ── DeepVerify Image Authenticity Result Card (Binary Verdict Only: FAKE or ORIGINAL) ── -->
+          <div class="deepverify-result-card" id="deepVerifyResultCard" style="display:none;">
+            <div class="dv-card-header">
+              <div class="dv-verdict-wrapper">
+                <span class="dv-category-badge badge-ai" id="dvCategoryBadge">FAKE</span>
+                <div class="dv-primary-verdict-title" id="dvPrimaryVerdictTitle">FAKE</div>
+                <span class="dv-status-subtext" id="dvStatusSubtext">Detection Result: FAKE</span>
+              </div>
+              <div class="dv-gauge-wrapper" style="display:none;">
+                <div class="dv-score-val" id="dvModelScore"></div>
+                <div class="dv-score-title" id="dvScoreTitle"></div>
+              </div>
+            </div>
+
+            <!-- Single Confidence Gauge Track (Hidden - No Probabilities) -->
+            <div class="dv-single-bar-section" style="display:none;">
+              <div class="dv-single-bar-track">
+                <div class="dv-single-bar-fill bar-ai" id="dvSingleBarFill" style="width: 100%;"></div>
+              </div>
+            </div>
+
+            <!-- Explanation Box -->
+            <div class="dv-explanation-box">
+              <div class="dv-exp-badge">🔬 Model Analysis Result</div>
+              <div class="dv-exp-text" id="dvExplanationText">
+                The detection model evaluated image authenticity.
+              </div>
+            </div>
+
+            <!-- Card Footer -->
+            <div class="dv-card-footer">
+              <div class="dv-meta-group">
+                <span class="dv-meta-item">Detector: <strong id="dvModelName">DeepVerify Vision Transformer Pipeline</strong></span>
+                <span class="dv-meta-item">Latency: <strong id="dvProcTime">42 ms</strong></span>
+              </div>
             </div>
           </div>
         </div>
@@ -381,18 +403,67 @@
               <!-- Live Microphone Recorder & Audio Drop -->
               <div class="audio-interactive-controls">
                 <div class="mic-record-panel">
+                  <!-- Microphone Device Selector Dropdown -->
+                  <div class="mic-device-picker" id="micDevicePickerRow" style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                    <span style="font-size:11px; color:var(--neon-cyan); font-weight:600; white-space:nowrap;">🎙️ Input Device:</span>
+                    <select id="micDeviceSelect" class="mic-device-select" style="flex:1; background:#040812; color:#fff; border:1px solid rgba(0,212,255,0.3); border-radius:6px; padding:6px 10px; font-size:12px; outline:none;">
+                      <option value="">Default Laptop Microphone</option>
+                    </select>
+                  </div>
+
                   <button class="btn-mic-record" id="micRecordBtn">
                     <span class="mic-icon">🎙️</span>
                     <span id="micBtnText">Speak into Mic (Real-Time Scan)</span>
                   </button>
                   <span class="mic-status" id="micStatusText">Click to start live voice clone analysis</span>
+
+                  <!-- Live Microphone Input Volume Meter -->
+                  <div id="micLiveMeterContainer" class="mic-meter-container" style="display:none;">
+                    <span class="meter-label">🎙️ Mic Input Volume:</span>
+                    <div class="meter-bar-track">
+                      <div id="micLiveMeterFill" class="meter-bar-fill" style="width: 0%;"></div>
+                    </div>
+                    <span id="micLiveMeterPct" class="meter-pct">0%</span>
+                  </div>
+
+                  <!-- Voice Playback Card for User to Listen to what they said -->
+                  <div id="recordedAudioContainer" class="recorded-audio-container" style="display:none;">
+                    <div class="recorded-audio-header">
+                      <div class="audio-header-left">
+                        <span class="audio-pulse-indicator"></span>
+                        <strong class="audio-title">🎧 Recorded Voice Playback</strong>
+                      </div>
+                      <span id="recordedAudioDuration" class="audio-duration-tag">00:00</span>
+                    </div>
+
+                    <div class="recorded-audio-body">
+                      <!-- Direct Listen Button + Test Laptop Speakers Button -->
+                      <div class="playback-btn-row">
+                        <button type="button" id="listenRecordedVoiceBtn" class="btn-listen-voice">
+                          <span id="listenBtnIcon">▶️</span>
+                          <span id="listenBtnLabel">Listen to What I Said</span>
+                        </button>
+                        <button type="button" id="testSpeakerBtn" class="btn-test-speaker" title="Click to test if laptop speakers are working">
+                          🔊 Test Laptop Sound
+                        </button>
+                      </div>
+
+                      <!-- Standard Audio Player for scrub/volume/timeline -->
+                      <audio id="recordedAudioPlayer" controls style="width: 100%; height: 36px; border-radius: 8px;"></audio>
+                    </div>
+
+                    <div class="recorded-audio-footer">
+                      <span class="audio-tip">💡 Tip: Verify your voice, then click <strong>Analyze Voice Acoustics</strong> below to scan.</span>
+                      <button type="button" id="discardRecordedAudioBtn" class="btn-discard-audio" title="Discard recording">✕ Discard</button>
+                    </div>
+                  </div>
                 </div>
 
                 <div class="audio-divider"><span>OR UPLOAD AUDIO FILE</span></div>
 
                 <div class="audio-file-upload">
-                  <input type="file" id="audioFileInput" accept="audio/*" style="display:none;" />
-                  <button class="btn-outline" id="browseAudioBtn">📂 Browse WAV / MP3 / OGG</button>
+                  <input type="file" id="audioFileInput" accept="audio/*,.wav,.mp3,.m4a,.webm,.ogg,.aac,.flac" style="display:none;" />
+                  <button class="btn-outline" id="browseAudioBtn">📂 Browse WAV / MP3 / M4A / WebM</button>
                   <span class="audio-selected-name" id="audioSelectedName">No file selected</span>
                 </div>
               </div>
@@ -666,181 +737,6 @@
 
 
     <!-- ══════════════════════════════════════════════════════════════
-         SECTION 2: REAL-TIME GLOBAL CYBER THREAT MAP
-         ══════════════════════════════════════════════════════════════ -->
-    <section class="workspace-section" id="map">
-      <div class="section-title-wrap">
-        <div>
-          <span class="sub-badge">GLOBAL INTELLIGENCE GRID</span>
-          <h2 class="section-heading">Live Cyber <span class="gradient-text">Threat Radar Map</span></h2>
-        </div>
-        <div class="map-live-badge">
-          <span class="live-pulse-dot"></span>
-          <span>Telemetry Stream Active</span>
-        </div>
-      </div>
-
-      <div class="threat-map-wrapper">
-        <!-- Interactive Cyber Map -->
-        <div class="cyber-map-container" id="cyberMapContainer">
-          <!-- Background Radar Grid -->
-          <svg class="map-svg-grid" viewBox="0 0 1000 500" preserveAspectRatio="none">
-            <defs>
-              <radialGradient id="radarScanGrad" cx="50%" cy="50%" r="50%">
-                <stop offset="0%" stop-color="rgba(0, 212, 255, 0.15)" />
-                <stop offset="100%" stop-color="rgba(0, 212, 255, 0)" />
-              </radialGradient>
-            </defs>
-            <circle cx="500" cy="250" r="220" fill="url(#radarScanGrad)" />
-            <circle cx="500" cy="250" r="220" stroke="rgba(0,212,255,0.15)" fill="none" stroke-dasharray="6,6" />
-            <circle cx="500" cy="250" r="140" stroke="rgba(0,212,255,0.2)" fill="none" />
-            <circle cx="500" cy="250" r="60" stroke="rgba(0,212,255,0.3)" fill="none" />
-            <line x1="0" y1="250" x2="1000" y2="250" stroke="rgba(0,212,255,0.1)" />
-            <line x1="500" y1="0" x2="500" y2="500" stroke="rgba(0,212,255,0.1)" />
-          </svg>
-
-          <!-- SVG Continent Paths (Futuristic Simplified Cyber Map) -->
-          <svg class="continents-svg" viewBox="0 0 1000 500">
-            <!-- North America -->
-            <path d="M120,80 L280,80 L310,160 L240,220 L180,260 L140,210 L90,140 Z" class="continent-path" />
-            <!-- South America -->
-            <path d="M220,270 L300,280 L330,360 L280,450 L240,430 L200,340 Z" class="continent-path" />
-            <!-- Europe -->
-            <path d="M440,80 L560,70 L580,140 L520,180 L450,160 L430,120 Z" class="continent-path" />
-            <!-- Africa -->
-            <path d="M450,190 L560,190 L590,290 L540,410 L480,410 L430,280 Z" class="continent-path" />
-            <!-- Asia -->
-            <path d="M580,70 L860,60 L920,180 L840,260 L700,280 L600,210 L580,130 Z" class="continent-path" />
-            <!-- Australia -->
-            <path d="M780,340 L880,330 L900,420 L810,430 L760,380 Z" class="continent-path" />
-          </svg>
-
-          <!-- Dynamic Regional Threat Nodes -->
-          <div class="map-nodes-container" id="mapNodesContainer">
-            <!-- Nodes dynamically rendered by app.js -->
-          </div>
-        </div>
-
-        <!-- Map Side Info & Stream Feed -->
-        <div class="map-side-feed">
-          <div class="side-feed-header">
-            <h4>🚨 Real-Time Attack Feed</h4>
-            <span class="feed-badge" id="incidentCountBadge">9 Active Nodes</span>
-          </div>
-          <div class="incident-stream-list" id="incidentStreamList">
-            <!-- Dynamic stream items -->
-          </div>
-        </div>
-      </div>
-    </section>
-
-
-    <!-- ══════════════════════════════════════════════════════════════
-         SECTION 3: THREAT ANALYST SOC WAR ROOM (Role: Analyst / Admin)
-         ══════════════════════════════════════════════════════════════ -->
-    <section class="workspace-section" id="analyst">
-      <div class="section-title-wrap">
-        <div>
-          <span class="sub-badge">SECURITY OPERATIONS CENTER</span>
-          <h2 class="section-heading">Threat Analyst <span class="gradient-text">SOC War Room</span></h2>
-        </div>
-        <button class="btn-cyan" id="openReportThreatModalBtn">➕ Submit Incident Report</button>
-      </div>
-
-      <div class="soc-grid">
-        <!-- Threats Triage Table -->
-        <div class="soc-table-card">
-          <div class="table-header">
-            <h3>Active Incident Queue</h3>
-            <span class="table-sub">Live fraud reports submitted for investigation</span>
-          </div>
-          <div class="table-responsive">
-            <table class="cyber-table">
-              <thead>
-                <tr>
-                  <th>Incident Type</th>
-                  <th>Description</th>
-                  <th>Severity</th>
-                  <th>Region</th>
-                  <th>Status</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody id="socThreatsTbody">
-                <!-- Dynamically loaded -->
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </section>
-
-
-    <!-- ══════════════════════════════════════════════════════════════
-         SECTION 4: SECURITY ADMIN CENTER (Role: Admin)
-         ══════════════════════════════════════════════════════════════ -->
-    <section class="workspace-section" id="admin">
-      <div class="section-title-wrap">
-        <div>
-          <span class="sub-badge">ADMINISTRATION & HEALTH</span>
-          <h2 class="section-heading">Security <span class="gradient-text">Admin Control Center</span></h2>
-        </div>
-        <div class="admin-badge">Admin Privileges Active</div>
-      </div>
-
-      <div class="admin-grid">
-        <!-- System Health Telemetry -->
-        <div class="admin-card" id="adminTelemetryCard">
-          <h3>🖥️ Server & Cluster Telemetry</h3>
-          <div class="telemetry-stats" id="adminTelemetry">
-            <div class="tele-item">
-              <span class="tele-label">Cluster Status</span>
-              <span class="tele-val text-emerald" id="teleUptime">Operational (100%)</span>
-            </div>
-            <div class="tele-item">
-              <span class="tele-label">API Latency</span>
-              <span class="tele-val text-cyan" id="teleLatency">34 ms</span>
-            </div>
-            <div class="tele-item">
-              <span class="tele-label">CPU Load</span>
-              <span class="tele-val text-cyan" id="teleCpu">18.5%</span>
-            </div>
-            <div class="tele-item">
-              <span class="tele-label">Memory Usage</span>
-              <span class="tele-val text-cyan" id="teleMem">32.8%</span>
-            </div>
-            <div class="tele-item">
-              <span class="tele-label">Database Mode</span>
-              <span class="tele-val text-emerald" id="teleDbMode">Production InMemory / MongoDB</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Registered Users Table -->
-        <div class="admin-card full-width" id="adminUsersCard">
-          <h3>👥 User Accounts & Access Control</h3>
-          <div class="table-responsive">
-            <table class="cyber-table">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Email</th>
-                  <th>Role</th>
-                  <th>Verified</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody id="adminUsersTbody">
-                <!-- Dynamically loaded -->
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </section>
-
-
-    <!-- ══════════════════════════════════════════════════════════════
          SECTION 5: SCAN HISTORY
          ══════════════════════════════════════════════════════════════ -->
     <section class="workspace-section" id="history">
@@ -897,44 +793,43 @@
       <div class="modal-body forensic-body">
         <!-- Top Verdict Bar -->
         <div class="forensic-top-card" id="forensicTopCard">
-          <div class="verdict-ring-wrap">
+          <div class="verdict-ring-wrap" style="display:none;">
             <svg width="110" height="110" viewBox="0 0 110 110">
               <circle cx="55" cy="55" r="45" class="v-ring-bg" />
               <circle cx="55" cy="55" r="45" class="v-ring-fill" id="modalRingFill" stroke-dasharray="283"
                 stroke-dashoffset="20" />
             </svg>
             <div class="v-ring-text">
-              <span class="v-ring-val" id="modalConfidenceVal">94%</span>
-              <span class="v-ring-sub">Confidence</span>
+              <span class="v-ring-val" id="modalConfidenceVal"></span>
+              <span class="v-ring-sub"></span>
             </div>
           </div>
 
           <div class="verdict-summary-info">
             <div class="v-badge-row">
               <span class="v-pill" id="modalVerdictPill">FAKE</span>
-              <span class="risk-indicator" id="modalRiskLevel">High Risk</span>
+              <span class="risk-indicator" id="modalRiskLevel">FAKE</span>
             </div>
-            <p class="v-explanation" id="modalExplanation">Synthetic noise clusters and 2D DFT Fourier spectral spikes
-              detected.</p>
+            <p class="v-explanation" id="modalExplanation">Synthetic manipulation markers detected.</p>
           </div>
         </div>
 
-        <!-- Probabilities Breakdown -->
-        <div class="forensic-probs-card">
+        <!-- Probabilities Breakdown (Hidden - strictly FAKE or ORIGINAL) -->
+        <div class="forensic-probs-card" style="display:none;">
           <h4>Probability Distribution</h4>
           <div class="prob-row">
             <span class="p-label">Synthetic / Manipulated Probability</span>
             <div class="p-track">
-              <div class="p-fill crimson" id="modalFakeProbBar" style="width:94%;"></div>
+              <div class="p-fill crimson" id="modalFakeProbBar" style="width:100%;"></div>
             </div>
-            <span class="p-pct crimson" id="modalFakeProbPct">94.0%</span>
+            <span class="p-pct crimson" id="modalFakeProbPct"></span>
           </div>
           <div class="prob-row">
             <span class="p-label">Authentic Organic Probability</span>
             <div class="p-track">
-              <div class="p-fill emerald" id="modalRealProbBar" style="width:6%;"></div>
+              <div class="p-fill emerald" id="modalRealProbBar" style="width:0%;"></div>
             </div>
-            <span class="p-pct emerald" id="modalRealProbPct">6.0%</span>
+            <span class="p-pct emerald" id="modalRealProbPct"></span>
           </div>
         </div>
 
@@ -964,20 +859,20 @@
 
 
   <!-- ── 2. Authentication Modal ── -->
-  <div class="modal-backdrop" id="authModal" style="display:none;">
+  <div class="modal-backdrop" id="authModal" style="display:none;" onclick="if(event.target===this)closeModal('authModal')">
     <div class="modal-dialog auth-modal-dialog">
       <div class="modal-header">
         <h3>SocialShield Authentication</h3>
-        <button class="modal-close-btn" id="closeAuthModalBtn">✕</button>
+        <button type="button" class="modal-close-btn" id="closeAuthModalBtn" onclick="closeModal('authModal')" title="Close">✕</button>
       </div>
       <div class="modal-body">
         <div class="auth-tabs">
-          <button class="auth-tab active" id="tabLogin">Sign In</button>
-          <button class="auth-tab" id="tabRegister">Register</button>
+          <button class="auth-tab active" id="tabRegister" type="button">Register</button>
+          <button class="auth-tab" id="tabLogin" type="button">Sign In</button>
         </div>
 
         <!-- Login Form -->
-        <form id="loginForm" class="auth-form active">
+        <form id="loginForm" class="auth-form" style="display:none;">
           <div class="form-group">
             <label>Email Address</label>
             <input type="email" id="loginEmail" required placeholder="user@socialshield.ai" />
@@ -1002,10 +897,21 @@
             </div>
           </div>
           <button type="submit" class="btn-cyan full-width">Sign In</button>
+
+          <div style="text-align: center; margin-top: 12px; font-size: 12px; color: var(--text-dim);">
+            New user? <a href="#" id="linkToRegister" style="color: var(--neon-cyan); font-weight: 700; text-decoration: none;">Create an account →</a>
+          </div>
+
+          <!-- Direct Login for Owner/Admin ONLY (aadarshavula2005@gmail.com) -->
+          <div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.08); text-align: center;">
+            <button type="button" class="btn-outline full-width" style="padding: 9px 12px; font-size: 12px; font-weight: 700; border-color: rgba(0, 212, 255, 0.4); color: var(--neon-cyan); display: inline-flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer;" onclick="directAdminLogin()">
+              <span>👑</span> Direct Admin Login (aadarshavula2005@gmail.com)
+            </button>
+          </div>
         </form>
 
-        <!-- Register Form -->
-        <form id="registerForm" class="auth-form" style="display:none;">
+        <!-- Register Form (Default First for New Users) -->
+        <form id="registerForm" class="auth-form active">
           <div class="form-group">
             <label>Full Name</label>
             <input type="text" id="regName" required placeholder="Alex Mercer" />
@@ -1030,14 +936,11 @@
               </button>
             </div>
           </div>
-          <div class="form-group">
-            <label>Account Role</label>
-            <select id="regRole">
-              <option value="user">Standard User</option>
-              <option value="analyst">Threat Analyst</option>
-            </select>
-          </div>
           <button type="submit" class="btn-cyan full-width">Create Account</button>
+
+          <div style="text-align: center; margin-top: 14px; font-size: 12px; color: var(--text-dim);">
+            Already registered? <a href="#" id="linkToSignIn" style="color: var(--neon-cyan); font-weight: 700; text-decoration: none;">Sign In here →</a>
+          </div>
         </form>
 
         <!-- Forgot / Reset Password Form -->
@@ -1188,15 +1091,137 @@
               <img src="/qr_open_web.png" alt="Scan to Open Web App" style="width:140px; height:140px; display:block;" />
             </div>
             <div style="font-size:11px; color:var(--text-dim); margin-bottom:12px;">Live Browser App (Port 5000)</div>
-            <a href="http://192.168.1.8:5000" target="_blank" class="btn-outline full-width" style="padding:8px 12px; font-size:12px; text-decoration:none; display:inline-block; text-align:center; border-color:var(--neon-emerald); color:var(--neon-emerald); font-weight:700;">
+            <a id="openWebAppLink" href="#" target="_blank" class="btn-outline full-width" style="padding:8px 12px; font-size:12px; text-decoration:none; display:inline-block; text-align:center; border-color:var(--neon-emerald); color:var(--neon-emerald); font-weight:700;">
               🔗 Open URL
             </a>
           </div>
         </div>
 
         <div style="background:rgba(0,212,255,0.06); border:1px solid rgba(0,212,255,0.25); border-radius:8px; padding:12px 14px; font-size:12px; color:var(--text-main); text-align:left; line-height:1.5;">
-          💡 <strong>Wi-Fi Note:</strong> Make sure your mobile phone is connected to the same Wi-Fi network (<code>192.168.1.8</code>) as your laptop.
+          💡 <strong>Wi-Fi Note:</strong> Make sure your mobile phone is connected to the same Wi-Fi network as your laptop. URL: <code id="wifiNoteIP">http://172.20.10.4:5000</code>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 5. Login Success Popup Modal ── -->
+  <div class="modal-backdrop" id="loginSuccessModal" style="display:none;">
+    <div class="modal-dialog" style="max-width:440px; text-align:center;">
+      <div class="modal-header" style="justify-content:center; border-bottom:none; padding-bottom:4px;">
+        <div class="login-success-badge-icon" style="width:68px; height:68px; border-radius:50%; background:rgba(6,255,165,0.12); border:2px solid var(--neon-emerald); display:flex; align-items:center; justify-content:center; margin:0 auto; box-shadow:0 0 25px rgba(6,255,165,0.25);">
+          <span style="font-size:34px;">🛡️</span>
+        </div>
+      </div>
+      <div class="modal-body" style="padding:10px 24px 24px;">
+        <h3 style="font-size:20px; font-weight:800; color:#fff; margin-bottom:8px;">Authentication Successful</h3>
+        <p style="font-size:13px; color:var(--text-muted); margin-bottom:18px;">
+          Welcome back, <strong id="loginSuccessUserName" style="color:var(--neon-cyan);">Analyst</strong>! Your DeepVerify cryptographic session has been initialized.
+        </p>
+
+        <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(0,212,255,0.2); border-radius:10px; padding:12px; margin-bottom:20px; text-align:left; font-size:12px;">
+          <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+            <span style="color:var(--text-dim);">Account:</span>
+            <span id="loginSuccessEmail" style="color:#fff; font-weight:600;">user@socialshield.ai</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+            <span style="color:var(--text-dim);">Access Role:</span>
+            <span id="loginSuccessRole" class="badge-tag" style="background:rgba(6,255,165,0.15); color:var(--neon-emerald); padding:2px 8px; border-radius:4px; font-weight:700;">Threat Analyst</span>
+          </div>
+          <div style="display:flex; justify-content:space-between;">
+            <span style="color:var(--text-dim);">Engine Status:</span>
+            <span style="color:var(--neon-cyan); font-weight:600;">DeepVerify v2.1 Active</span>
+          </div>
+        </div>
+
+        <button type="button" class="btn-cyan full-width" id="closeLoginSuccessModalBtn" style="padding:12px; font-size:14px; font-weight:700;">
+          Proceed to Dashboard →
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 6. Manage User Access & Sessions Modal ── -->
+  <div class="modal-backdrop" id="manageUserModal" style="display:none;" onclick="if(event.target===this)closeModal('manageUserModal')">
+    <div class="modal-dialog" style="max-width:520px;">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span class="modal-badge" id="manageModalBadge">ACCESS &amp; PERMISSION CONTROL</span>
+          <h3 id="manageModalTitle">Manage User Account</h3>
+        </div>
+        <button class="modal-close-btn" id="closeManageUserModalBtn" onclick="closeModal('manageUserModal')" title="Close">✕</button>
+      </div>
+
+      <div class="modal-body" style="padding: 22px;">
+        <!-- User Info Card -->
+        <div style="background: rgba(14, 25, 45, 0.7); border: 1px solid rgba(0, 212, 255, 0.25); border-radius: 12px; padding: 16px; margin-bottom: 20px; display: flex; align-items: center; gap: 16px;">
+          <div style="width: 50px; height: 50px; border-radius: 50%; background: linear-gradient(135deg, rgba(0,212,255,0.2), rgba(123,97,255,0.3)); border: 1px solid var(--neon-cyan); display: flex; align-items: center; justify-content: center; font-size: 24px;" id="manageUserAvatar">
+            👤
+          </div>
+          <div style="flex: 1;">
+            <div style="font-weight: 700; font-size: 16px; color: #fff;" id="manageUserName">User Name</div>
+            <div style="font-size: 13px; color: var(--text-muted); font-family: var(--font-mono);" id="manageUserEmail">user@example.com</div>
+            <div style="margin-top: 8px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+              <span id="manageUserRoleBadge" class="status-badge resolved">ADMIN</span>
+              <span id="manageUserSessionBadge" class="status-badge investigating">ACTIVE SESSION</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Protected Owner Notice (Shown when viewing Aadarsh) -->
+        <div id="manageOwnerNotice" style="display:none; background: rgba(0, 212, 255, 0.08); border: 1px solid var(--neon-cyan); border-radius: 10px; padding: 12px 14px; margin-bottom: 18px; font-size: 13px; color: var(--neon-cyan); line-height: 1.5;">
+          👑 <strong>Primary Super Admin &amp; Owner:</strong> This primary master account is protected against demotion and forced lockout.
+        </div>
+
+        <!-- Actions Container -->
+        <div id="manageUserActions" style="display: flex; flex-direction: column; gap: 16px;">
+          
+          <!-- Role Management Card -->
+          <div style="background: rgba(11, 20, 38, 0.6); border: 1px solid var(--border-glow); border-radius: 12px; padding: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); font-weight: 700;">
+                🛡️ Role &amp; Permission Level
+              </div>
+            </div>
+            <p style="font-size: 12px; color: var(--text-dim); margin-bottom: 14px; line-height: 1.4;">
+              Change this user's privileges. Granting Admin enables access to the Admin Center and security telemetry.
+            </p>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+              <button type="button" class="btn-cyan" id="btnMakeAdmin" style="flex: 1; padding: 10px 14px; font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer;">
+                <span>👑</span> Make Admin
+              </button>
+              <button type="button" class="btn-outline" id="btnRemoveAdmin" style="flex: 1; padding: 10px 14px; font-size: 13px; font-weight: 700; border-color: rgba(255, 51, 102, 0.7); color: #ff3366; display: inline-flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer;">
+                <span>🛡️</span> Remove Admin
+              </button>
+            </div>
+          </div>
+
+          <!-- Session Management Card -->
+          <div style="background: rgba(11, 20, 38, 0.6); border: 1px solid var(--border-glow); border-radius: 12px; padding: 16px;">
+            <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 6px; font-weight: 700;">
+              🚪 Active Login &amp; Session Control
+            </div>
+            <p style="font-size: 12px; color: var(--text-dim); margin-bottom: 14px; line-height: 1.4;">
+              Manage this user's login access. Terminate all active sessions or restore login permissions.
+            </p>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              <button type="button" class="btn-outline" id="btnForceLogout" style="width: 100%; padding: 11px 14px; font-size: 13px; font-weight: 700; border-color: rgba(255, 77, 77, 0.8); background: rgba(255, 77, 77, 0.08); color: #ff5252; display: inline-flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer;">
+                <span>⚠️</span> Force Logout (All Logins)
+              </button>
+              <button type="button" class="btn-cyan" id="btnActivateUser" style="width: 100%; padding: 11px 14px; font-size: 13px; font-weight: 700; display: none; align-items: center; justify-content: center; gap: 8px; cursor: pointer; background: rgba(6, 255, 165, 0.15); border: 1px solid var(--neon-emerald); color: var(--neon-emerald);">
+                <span>🔄</span> Restore Session / Allow Login
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Action Status Message -->
+        <div id="manageUserStatusMsg" style="margin-top: 14px; font-size: 13px; display: none; padding: 10px 14px; border-radius: 8px;"></div>
+
+        <!-- Dedicated Close Button -->
+        <button type="button" class="btn-outline full-width" onclick="closeModal('manageUserModal')" style="padding: 10px 14px; font-size: 13px; font-weight: 700; margin-top: 14px; cursor: pointer; border-color: rgba(255,255,255,0.2); color: var(--text-muted);">
+          ✕ Close Window
+        </button>
       </div>
     </div>
   </div>
@@ -1205,7 +1230,7 @@
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Scripts -->
-  <script src="app.js?v=2.7"></script>
+  <script src="app.js?v=4.5"></script>
 </body>
 
 </html>

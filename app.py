@@ -2,7 +2,7 @@ import os
 import time
 import datetime
 import json
-import random
+import logging
 from flask import Flask, request, jsonify, send_from_directory, Response
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
@@ -11,9 +11,13 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from models import get_db, init_db, is_mock
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
+
+from models import get_db, init_db
 import auth
 import ai_engine
+import image_authenticity_detector
 
 def _utcnow():
     return datetime.datetime.now(datetime.timezone.utc)
@@ -123,12 +127,24 @@ def get_current_user():
             if not user_id:
                 user_id = f"user_{email.replace('@', '_').replace('.', '_')}"
 
+    is_logged_out = False
+    if email and email != 'aadarshavula2005@gmail.com':
+        try:
+            db = get_db()
+            db_user = db['users'].find_one({'email': email})
+            if db_user:
+                role = db_user.get('role', role)
+                is_logged_out = bool(db_user.get('is_logged_out', False))
+        except Exception:
+            pass
+
     return {
         'sub': user_id,
         'user_id': user_id,
         'email': email,
         'name': name,
-        'role': role
+        'role': role,
+        'is_logged_out': is_logged_out
     }
 
 # ====================================================
@@ -379,13 +395,13 @@ def uploaded_file(filename):
 def health():
     return jsonify({
         'status': 'active',
-        'database': 'mock-in-memory' if is_mock() else 'connected',
+        'database': 'connected',
         'timestamp': _utcnow().isoformat(),
-        'version': '2.0.0-realtime',
-        'models_loaded': ['Text-NLP-LogisticRegression', 'Image-OpenCV-2D-DFT', 'Audio-Vocoder-Harmonics', 'Video-Temporal-Jitter', 'URL-Heuristics', 'Profile-Bot-Analyzer']
+        'version': '2.1.0-deepverify'
     }), 200
 
 @app.route('/api/stats/realtime', methods=['GET'])
+@app.route('/api/v1/stats', methods=['GET'])
 def get_realtime_stats():
     db = get_db()
     scans_col = db['scans']
@@ -404,14 +420,14 @@ def get_realtime_stats():
         trust_score = max(15, min(99, int(100 - (high_risk_ratio * 45))))
         
     return jsonify({
-        'total_scans': total_scans + 12480,
-        'blocked_threats': fake_count + 8420,
-        'safe_scans': safe_count + 4060,
-        'suspicious_scans': suspicious_count + 540,
+        'total_scans': total_scans,
+        'blocked_threats': fake_count,
+        'fake_detected': fake_count,
+        'safe_scans': safe_count,
+        'safe_detected': safe_count,
+        'suspicious_scans': suspicious_count,
+        'suspicious_detected': suspicious_count,
         'trust_score': trust_score,
-        'active_nodes': 9,
-        'ai_accuracy': 99.4,
-        'latency_ms': random.randint(32, 48),
         'timestamp': _utcnow().isoformat()
     }), 200
 
@@ -423,27 +439,37 @@ def get_realtime_stats():
 @app.route('/api/stream/threats', methods=['GET'])
 def stream_threats():
     def event_generator():
-        regions = ['North America', 'Europe', 'South Asia', 'East Asia', 'SEA', 'Middle East', 'Africa', 'South America', 'Oceania']
-        threat_types = ['Image Deepfake', 'Voice Clone Attack', 'Phishing URL', 'Scam Keystroke', 'Social Media Botnet', 'Executive Impersonation']
-        severities = ['Critical', 'High', 'Medium']
-        
+        db = get_db()
+        threats_col = db['threats']
+        sent_ids = set()
+
         while True:
-            t_type = random.choice(threat_types)
-            region = random.choice(regions)
-            sev = random.choice(severities)
-            score = random.randint(72, 99)
-            
-            event_payload = {
-                'id': f"threat_{int(time.time() * 1000)}",
-                'type': t_type,
-                'region': region,
-                'severity': sev,
-                'score': score,
-                'target': f"Target {random.choice(['Financial Portal', 'Corporate DM', 'Identity Verification', 'Telecom Voicemail', 'Social Account'])}",
-                'timestamp': _utcnow().strftime('%H:%M:%S UTC')
-            }
-            yield f"data: {json.dumps(event_payload)}\n\n"
-            time.sleep(3.5)
+            # Stream real threats from DB first
+            try:
+                threats = list(threats_col.find({}).sort('created_at', -1).limit(20))
+                for threat in threats:
+                    tid = str(threat.get('_id', threat.get('id', '')))
+                    if tid and tid not in sent_ids:
+                        sent_ids.add(tid)
+                        event_payload = {
+                            'id': tid,
+                            'type': threat.get('type', 'Unknown'),
+                            'region': threat.get('region', 'Global'),
+                            'severity': threat.get('severity', 'Medium'),
+                            'score': 85 if threat.get('severity') == 'Critical' else 72,
+                            'description': threat.get('description', ''),
+                            'status': threat.get('status', 'pending'),
+                            'timestamp': (
+                                threat['created_at'].strftime('%H:%M:%S UTC')
+                                if isinstance(threat.get('created_at'), datetime.datetime)
+                                else _utcnow().strftime('%H:%M:%S UTC')
+                            )
+                        }
+                        yield f"data: {json.dumps(event_payload)}\n\n"
+            except Exception as e:
+                logger.warning(f"SSE stream DB error: {e}")
+
+            time.sleep(5.0)
             
     return Response(event_generator(), mimetype='text/event-stream', headers={
         'Cache-Control': 'no-cache',
@@ -536,6 +562,7 @@ def get_profile():
 
 # 1. TEXT SCAM SCAN (NLP & Keystroke Real-Time)
 @app.route('/api/scans/text', methods=['POST'])
+@app.route('/api/v1/scan/text', methods=['POST'])
 @rate_limit(120, 60)
 def scan_text():
     data = request.get_json() or {}
@@ -577,6 +604,7 @@ def scan_text():
 
 # 2. URL PHISHING SCAN
 @app.route('/api/scans/url', methods=['POST'])
+@app.route('/api/v1/scan/url', methods=['POST'])
 @rate_limit(120, 60)
 def scan_url():
     data = request.get_json() or {}
@@ -616,153 +644,277 @@ def scan_url():
     return jsonify(result), 200
 
 
-# 3. IMAGE DEEPFAKE SCAN (Fourier 2D DFT & OpenCV)
+# 3. DEEPVERIFY AI IMAGE AUTHENTICITY & DEEPFAKE DETECTION
+@app.route('/api/detect-image', methods=['POST'])
 @app.route('/api/scans/image', methods=['POST'])
 @app.route('/api/v1/scan/image', methods=['POST'])
-@rate_limit(60, 60)
+@rate_limit(120, 60)
 def scan_image():
     user = get_current_user()
     filepath = None
     filename = 'sample_image.png'
     source = ''
     
-    # Check multipart file or base64
-    if 'image' in request.files:
-        file = request.files['image']
-        source = request.form.get('source', '')
-        if file.filename != '':
-            filename = secure_filename(f"{int(time.time())}_{file.filename}")
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            file.save(filepath)
+    # 1. Handle multipart file upload (image or file form field)
+    file_obj = request.files.get('image') or request.files.get('file')
+    if file_obj and file_obj.filename != '':
+        source = request.form.get('source', 'upload')
+        orig_name = secure_filename(file_obj.filename)
+        ext = os.path.splitext(orig_name)[1].lower()
+        if ext not in image_authenticity_detector.SUPPORTED_EXTENSIONS:
+            return jsonify({
+                'status': 'error',
+                'error': f"Unsupported image format '{ext}'. DeepVerify supports JPG, JPEG, PNG, and WEBP.",
+                'supported_formats': ['JPG', 'JPEG', 'PNG', 'WEBP']
+            }), 400
+            
+        filename = f"{int(time.time())}_{orig_name}"
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file_obj.save(filepath)
+        
     elif request.is_json:
         data = request.get_json() or {}
         source = data.get('source', '')
         preset = data.get('preset', '')
         custom_name = data.get('filename', '')
-        if custom_name:
-            filename = custom_name
-        if preset == 'organic' or any(k in (custom_name or '').lower() for k in ['organic', 'portrait', 'camera', 'real']):
-            source = 'preset_organic'
-            filename = 'organic_camera_portrait.jpg'
-        elif preset in ('synthetic', 'fake', 'ai') or any(k in (custom_name or '').lower() for k in ['synthetic', 'deepfake', 'gan', 'ai_generated', 'diffusion', 'stylegan']):
-            source = 'preset_synthetic'
-            filename = custom_name if custom_name else 'gan_stylegan_synthetic_face.png'
+        
+        # Check base64 input (webcam capture or API upload)
         b64 = data.get('image_base64')
         if b64:
             if not source:
                 source = 'webcam'
             import base64
-            custom_name = data.get('filename', f"live_camera_{int(time.time())}.jpg")
-            filename = secure_filename(custom_name)
+            clean_name = secure_filename(custom_name) if custom_name else f"capture_{int(time.time())}.jpg"
+            filename = f"{int(time.time())}_{clean_name}"
             filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             if ',' in b64:
                 b64 = b64.split(',')[1]
-            with open(filepath, 'wb') as f:
-                f.write(base64.b64decode(b64))
+            try:
+                raw_bytes = base64.b64decode(b64)
+                with open(filepath, 'wb') as f:
+                    f.write(raw_bytes)
+            except Exception as e:
+                return jsonify({'status': 'error', 'error': f"Failed to decode base64 image: {str(e)}"}), 400
+                
+        elif preset or custom_name:
+            filename = custom_name or ('organic_camera_portrait.jpg' if preset == 'organic' else '1791791650_e12a58d9-0390-4860-b890-639a3752750c.png')
+            source = f"preset_{preset}" if preset else 'preset'
+            candidate_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            if os.path.exists(candidate_path):
+                filepath = candidate_path
 
-    if not filepath:
-        is_org = (source in ('preset_organic', 'organic')) or any(k in filename.lower() for k in ['organic', 'portrait', 'camera', 'real'])
-        is_synth = (source in ('preset_synthetic', 'synthetic', 'fake')) or any(k in filename.lower() for k in ['synthetic', 'deepfake', 'gan', 'ai_generated', 'diffusion', 'stylegan'])
-        result = ai_engine._generate_simulated_image_result(reason=filename, is_organic=is_org, is_synthetic=is_synth)
-    else:
+    # If no file was successfully parsed
+    if not filepath or not os.path.exists(filepath):
+        candidate = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(filename))
+        if os.path.exists(candidate):
+            filepath = candidate
+        else:
+            return jsonify({
+                'status': 'error',
+                'error': 'No valid image provided. Please upload an image file (JPG, JPEG, PNG, WEBP) or camera snapshot.'
+            }), 400
+
+    # 2. Validate file integrity and run actual model inference
+    is_valid, val_err, _ = image_authenticity_detector.validate_image_file(filepath)
+    if not is_valid:
+        return jsonify({
+            'status': 'error',
+            'error': val_err,
+            'classification': 'Uncertain',
+            'category': 'uncertain',
+            'model_score': 50.0
+        }), 400
+
+    # Execute DeepVerify Pretrained Neural Detection Pipeline (with OpenCV Fourier fallback)
+    try:
+        result = image_authenticity_detector.classify_image_authenticity(filepath, source_hint=source)
+    except Exception as e:
+        logger.warning(f"Neural model fallback to OpenCV Fourier detector: {e}")
         result = ai_engine.analyze_image_deepfake(filepath, source=source)
-    
+        result['category'] = 'ai_generated' if result.get('verdict') == 'AI IMAGE' else 'likely_original'
+
+    # Binary Classification Mappings: Only TWO outcomes: AI IMAGE or ORIGINAL IMAGE
+    category = result.get('category', 'ai_generated')
+    if category in ['ai_generated', 'fake']:
+        verdict = 'AI IMAGE'
+        risk_level = 'High Risk'
+    else:
+        verdict = 'ORIGINAL IMAGE'
+        risk_level = 'Safe'
+
+    result['verdict'] = verdict
+    result['risk_level'] = risk_level
+    result['score'] = 100
+    result['confidence'] = None
+    result['model_score'] = None
+    result['fake_probability'] = None
+    result['real_probability'] = None
+    result['manipulated_probability'] = None
+    result['explanations'] = [result.get('explanation', '')]
+    result['details'] = result.get('forensic_metrics', {})
+    result['details']['source'] = 'Live Camera Snapshot' if source == 'webcam' else 'File Upload'
+    result['image_url'] = f"/static/uploads/{filename}"
+
+    # 3. Save scan audit trail in database
     db = get_db()
     scan_doc = {
-        'user_id': user.get('user_id', user['sub']),
+        'user_id': user.get('user_id', user.get('sub', 'guest')),
         'user_email': user.get('email', '').lower(),
         'user_name': user.get('name', ''),
         'type': 'image',
         'input': filename,
-        'score': result['score'],
-        'risk_level': result['risk_level'],
-        'verdict': result['verdict'],
+        'classification': result['classification'],
+        'category': result['category'],
+        'score': result['model_score'],
         'confidence': result['confidence'],
+        'status': result['status_text'],
+        'verdict': verdict,
+        'risk_level': risk_level,
         'explanation': result['explanation'],
-        'details': result['details'],
+        'model_name': result['model_name'],
+        'model_version': result['model_version'],
+        'processing_time_ms': result['processing_time_ms'],
+        'details': result['forensic_metrics'],
         'created_at': _utcnow()
     }
     inserted = db['scans'].insert_one(scan_doc)
-    result['scanId'] = str(inserted.inserted_id) if hasattr(inserted, 'inserted_id') else f"scan_{int(time.time())}"
-    
-    _, _, recs = ai_engine.generate_overall_fraud_score([result])
+    scan_id_val = str(inserted.inserted_id) if hasattr(inserted, 'inserted_id') else f"scan_{int(time.time())}"
+    result['scanId'] = scan_id_val
+    result['scan_id'] = scan_id_val
+    result['status'] = result.get('status_text', f"Probable {result['classification']}")
+
+    # Generate protective recommendations
+    if category == 'ai_generated':
+        recs = [
+            "Do not rely on this image for official KYC identity verification or biometric proof.",
+            "Inspect fine structural details (irises, ear geometry, hairline, text artifacts) for generative blurring.",
+            "Request secondary real-time video challenge or optical signed photograph."
+        ]
+    elif category == 'manipulated':
+        recs = [
+            "Inspect localized spliced boundaries using ELA contrast filters.",
+            "Verify image origin with the source publisher or obtain original RAW sensor capture.",
+            "Flag potential compositing or deceptive alteration."
+        ]
+    elif category == 'likely_original':
+        recs = [
+            "Authentic camera sensor characteristics verified. Safe for standard processing.",
+            "Continue following standard digital media verification procedures.",
+            "Retain original file metadata for complete provenance record."
+        ]
+    else:
+        recs = [
+            "Image origin is uncertain due to compression or ambiguity. Do not conclude AI or authentic.",
+            "Request original uncompressed version (PNG or high-quality JPEG directly from device).",
+            "Verify through corroborating channels."
+        ]
     result['recommendations'] = recs
-    result['image_url'] = f"/static/uploads/{filename}" if filepath else ""
     result['mediaType'] = 'IMAGE'
     result['user_email'] = user.get('email', '').lower()
     result['user_name'] = user.get('name', '')
-    result['user_id'] = user.get('user_id', user['sub'])
-    
+    result['user_id'] = user.get('user_id', user.get('sub', 'guest'))
+
     return jsonify(result), 200
 
 
 # 4. AUDIO VOICE CLONE SCAN
 @app.route('/api/scans/audio', methods=['POST'])
+@app.route('/api/v1/scan/audio', methods=['POST'])
 @rate_limit(60, 60)
 def scan_audio():
     user = get_current_user()
     filepath = None
     filename = 'audio_sample.wav'
     preset = ''
+    mime_type = 'unknown'
+    file_size_bytes = 0
     
-    if 'audio' in request.files:
-        file = request.files['audio']
-        if file.filename != '':
-            filename = secure_filename(f"{int(time.time())}_{file.filename}")
+    try:
+        file_obj = request.files.get('audio') or request.files.get('file')
+        if file_obj and file_obj.filename != '':
+            raw_filename = secure_filename(file_obj.filename) or 'recording.webm'
+            filename = f"{int(time.time())}_{raw_filename}"
             filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            file.save(filepath)
-    elif request.is_json:
-        data = request.get_json() or {}
-        preset = data.get('preset', '')
-        custom_name = data.get('filename', '')
-        if custom_name:
-            filename = custom_name
-        b64 = data.get('audio_base64')
-        if b64 and len(b64) > 100:
-            import base64
-            custom_name = data.get('filename', f"voice_record_{int(time.time())}.wav")
-            filename = secure_filename(custom_name)
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            if ',' in b64:
-                b64 = b64.split(',')[1]
-            try:
-                with open(filepath, 'wb') as f:
-                    f.write(base64.b64decode(b64))
-            except Exception:
-                pass
+            file_obj.save(filepath)
+            mime_type = file_obj.content_type or file_obj.mimetype or 'audio/octet-stream'
+            file_size_bytes = os.path.getsize(filepath)
+            logger.info(f"[Audio Scan] Upload received: {filename} | MIME: {mime_type} | Size: {file_size_bytes} bytes")
+        elif request.is_json:
+            data = request.get_json() or {}
+            preset = data.get('preset', '')
+            custom_name = data.get('filename', '')
+            if custom_name:
+                filename = secure_filename(custom_name)
+            b64 = data.get('audio_base64')
+            if b64 and len(b64) > 100:
+                import base64
+                filename = secure_filename(custom_name or f"voice_record_{int(time.time())}.wav")
+                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                if ',' in b64:
+                    b64 = b64.split(',')[1]
+                try:
+                    with open(filepath, 'wb') as f:
+                        f.write(base64.b64decode(b64))
+                    file_size_bytes = os.path.getsize(filepath)
+                    mime_type = 'audio/base64'
+                    logger.info(f"[Audio Scan] Base64 payload decoded: {filename} | Size: {file_size_bytes} bytes")
+                except Exception as b64_err:
+                    logger.error(f"[Audio Scan] Base64 decode error: {b64_err}")
 
-    result = ai_engine.analyze_audio_voice_clone(filepath, filename=filename, preset=preset)
-    
-    db = get_db()
-    scan_doc = {
-        'user_id': user.get('user_id', user['sub']),
-        'user_email': user.get('email', '').lower(),
-        'user_name': user.get('name', ''),
-        'type': 'audio',
-        'input': filename,
-        'score': result['score'],
-        'risk_level': result['risk_level'],
-        'verdict': result['verdict'],
-        'confidence': result['confidence'],
-        'explanation': result['explanation'],
-        'details': result['details'],
-        'created_at': _utcnow()
-    }
-    inserted = db['scans'].insert_one(scan_doc)
-    result['scanId'] = str(inserted.inserted_id) if hasattr(inserted, 'inserted_id') else f"scan_{int(time.time())}"
-    
-    _, _, recs = ai_engine.generate_overall_fraud_score([result])
-    result['recommendations'] = recs
-    result['mediaType'] = 'AUDIO'
-    result['user_email'] = user.get('email', '').lower()
-    result['user_name'] = user.get('name', '')
-    result['user_id'] = user.get('user_id', user['sub'])
-    
-    return jsonify(result), 200
+        # Analyze actual audio signal with calibrated acoustic deepfake classifier
+        result = ai_engine.analyze_audio_voice_clone(filepath, filename=filename, preset=preset)
+        logger.info(
+            f"[Audio Scan] Analysis completed: Verdict={result.get('verdict')} | "
+            f"Confidence={result.get('confidence')}% | Risk={result.get('risk_level')} | File={filename}"
+        )
+        
+        db = get_db()
+        scan_doc = {
+            'user_id': user.get('user_id', user['sub']),
+            'user_email': user.get('email', '').lower(),
+            'user_name': user.get('name', ''),
+            'type': 'audio',
+            'input': filename,
+            'score': result.get('score', 0),
+            'risk_level': result.get('risk_level', 'Unknown'),
+            'verdict': result.get('verdict', 'UNCERTAIN'),
+            'confidence': result.get('confidence', 0.0),
+            'explanation': result.get('explanation', ''),
+            'details': result.get('details', {}),
+            'created_at': _utcnow()
+        }
+        inserted = db['scans'].insert_one(scan_doc)
+        result['scanId'] = str(inserted.inserted_id) if hasattr(inserted, 'inserted_id') else f"scan_{int(time.time())}"
+        
+        _, _, recs = ai_engine.generate_overall_fraud_score([result])
+        result['recommendations'] = recs
+        result['mediaType'] = 'AUDIO'
+        result['user_email'] = user.get('email', '').lower()
+        result['user_name'] = user.get('name', '')
+        result['user_id'] = user.get('user_id', user['sub'])
+        result['file_size'] = file_size_bytes
+        result['mime_type'] = mime_type
+        
+        return jsonify(result), 200
+
+    except Exception as e:
+        logger.error(f"[Audio Scan] Unexpected processing error: {e}", exc_info=True)
+        return jsonify({
+            'verdict': 'UNCERTAIN',
+            'classification': 'Unknown',
+            'confidence': 0.0,
+            'score': 0,
+            'risk_level': 'Unknown',
+            'explanation': f'Audio analysis encountered an error: {str(e)}',
+            'explanations': ['Audio signal could not be processed reliably', str(e)],
+            'mediaType': 'AUDIO',
+            'details': {'error': str(e)}
+        }), 200
 
 
 # 5. VIDEO DEEPFAKE SCAN
 @app.route('/api/scans/video', methods=['POST'])
+@app.route('/api/v1/scan/video', methods=['POST'])
 @rate_limit(30, 60)
 def scan_video():
     user = get_current_user()
@@ -770,12 +922,11 @@ def scan_video():
     filename = 'video_sample.mp4'
     preset = ''
     
-    if 'video' in request.files:
-        file = request.files['video']
-        if file.filename != '':
-            filename = secure_filename(f"{int(time.time())}_{file.filename}")
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            file.save(filepath)
+    file_obj = request.files.get('video') or request.files.get('file')
+    if file_obj and file_obj.filename != '':
+        filename = secure_filename(f"{int(time.time())}_{file_obj.filename}")
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file_obj.save(filepath)
     elif request.is_json:
         data = request.get_json() or {}
         preset = data.get('preset', '')
@@ -828,6 +979,7 @@ def scan_video():
 
 # 6. SOCIAL PROFILE BOT SCAN
 @app.route('/api/scans/profile', methods=['POST'])
+@app.route('/api/v1/scan/profile', methods=['POST'])
 @rate_limit(60, 60)
 def scan_profile():
     data = request.get_json() or {}
@@ -868,6 +1020,7 @@ def scan_profile():
 # ====================================================
 
 @app.route('/api/scans/history', methods=['GET'])
+@app.route('/api/v1/history', methods=['GET'])
 def get_scan_history():
     user = get_current_user()
     db = get_db()
@@ -934,6 +1087,7 @@ def get_scan_history():
         
     return jsonify({
         'scans': formatted,
+        'items': formatted,
         'user': {
             'email': current_email,
             'name': current_name,
@@ -943,9 +1097,12 @@ def get_scan_history():
     }), 200
 
 @app.route('/api/scans/<scan_id>', methods=['GET'])
+@app.route('/api/v1/history/<scan_id>', methods=['GET'])
 def get_scan_by_id(scan_id):
     db = get_db()
-    scan = db['scans'].find_one({'_id': ObjectId(scan_id) if not is_mock() else scan_id})
+    scan = None
+    if ObjectId.is_valid(scan_id):
+        scan = db['scans'].find_one({'_id': ObjectId(scan_id)})
     if not scan:
         # Fallback query for string id
         scan = db['scans'].find_one({'id': scan_id})
@@ -1015,16 +1172,17 @@ def admin_threats():
             return jsonify({'message': 'Threat ID and status required.'}), 400
             
         res = threats_col.update_one(
-            {'_id': ObjectId(threat_id) if not is_mock() else threat_id},
+            {'_id': ObjectId(threat_id)},
             {'$set': {'status': status}}
         )
         return jsonify({'message': f'Threat status updated to {status}.'}), 200
 
 @app.route('/api/admin/users', methods=['GET'])
 def admin_get_users():
-    user_email = (request.headers.get('X-User-Email') or '').lower().strip()
-    if user_email and user_email != 'aadarshavula2005@gmail.com':
-        return jsonify({'users': [], 'message': 'Access restricted to owner (aadarshavula2005@gmail.com).'}), 403
+    curr_user = get_current_user()
+    user_email = (request.headers.get('X-User-Email') or curr_user.get('email') or '').lower().strip()
+    if user_email != 'aadarshavula2005@gmail.com' and curr_user.get('role') != 'admin':
+        return jsonify({'users': [], 'message': 'Access restricted to administrator (aadarshavula2005@gmail.com).'}), 403
     db = get_db()
     users = list(db['users'].find({}, {'password': 0}))
     clean_users = []
@@ -1035,8 +1193,109 @@ def admin_get_users():
         u.pop('password', None)
         if isinstance(u.get('created_at'), datetime.datetime):
             u['created_at'] = u['created_at'].isoformat()
+        if isinstance(u.get('session_revoked_at'), datetime.datetime):
+            u['session_revoked_at'] = u['session_revoked_at'].isoformat()
+        if isinstance(u.get('last_login'), datetime.datetime):
+            u['last_login'] = u['last_login'].isoformat()
+        u['is_logged_out'] = bool(u.get('is_logged_out', False))
         clean_users.append(u)
     return jsonify({'users': clean_users}), 200
+
+@app.route('/api/admin/users/role', methods=['POST'])
+def admin_update_user_role():
+    curr_user = get_current_user()
+    user_email = (request.headers.get('X-User-Email') or curr_user.get('email') or '').lower().strip()
+    if user_email != 'aadarshavula2005@gmail.com' and curr_user.get('role') != 'admin':
+        return jsonify({'error': 'Unauthorized. Administrator access required.'}), 403
+
+    data = request.get_json(silent=True) or {}
+    target_email = str(data.get('email', '')).lower().strip()
+    new_role = str(data.get('role', '')).lower().strip()
+
+    if not target_email:
+        return jsonify({'error': 'Target user email is required.'}), 400
+    if new_role not in ('admin', 'analyst', 'user'):
+        return jsonify({'error': 'Invalid role. Permitted roles are: admin, analyst, user.'}), 400
+
+    # Safety guardrail: Primary Super Admin / Owner cannot be demoted
+    if target_email == 'aadarshavula2005@gmail.com' and new_role != 'admin':
+        return jsonify({'error': 'The Primary Super Admin / Owner (Aadarsh) cannot be demoted.'}), 400
+
+    db = get_db()
+    users_col = db['users']
+    res = users_col.update_one({'email': target_email}, {'$set': {'role': new_role}})
+    if res.matched_count == 0:
+        return jsonify({'error': f'User {target_email} not found in database.'}), 404
+
+    return jsonify({
+        'success': True,
+        'message': f'Role for {target_email} has been updated to {new_role.upper()}.',
+        'email': target_email,
+        'role': new_role
+    }), 200
+
+@app.route('/api/admin/users/logout', methods=['POST'])
+def admin_force_logout_user():
+    curr_user = get_current_user()
+    user_email = (request.headers.get('X-User-Email') or curr_user.get('email') or '').lower().strip()
+    if user_email != 'aadarshavula2005@gmail.com' and curr_user.get('role') != 'admin':
+        return jsonify({'error': 'Unauthorized. Administrator access required.'}), 403
+
+    data = request.get_json(silent=True) or {}
+    target_email = str(data.get('email', '')).lower().strip()
+
+    if not target_email:
+        return jsonify({'error': 'Target user email is required.'}), 400
+
+    # Safety guardrail: Primary Super Admin / Owner session cannot be revoked from this panel
+    if target_email == 'aadarshavula2005@gmail.com':
+        return jsonify({'error': 'The Primary Super Admin session cannot be revoked from this panel.'}), 400
+
+    db = get_db()
+    users_col = db['users']
+    res = users_col.update_one(
+        {'email': target_email},
+        {'$set': {
+            'is_logged_out': True,
+            'session_revoked_at': _utcnow()
+        }}
+    )
+    if res.matched_count == 0:
+        return jsonify({'error': f'User {target_email} not found in database.'}), 404
+
+    return jsonify({
+        'success': True,
+        'message': f'All active logins and sessions for {target_email} have been revoked and logged out.',
+        'email': target_email
+    }), 200
+
+@app.route('/api/admin/users/activate', methods=['POST'])
+def admin_activate_user():
+    curr_user = get_current_user()
+    user_email = (request.headers.get('X-User-Email') or curr_user.get('email') or '').lower().strip()
+    if user_email != 'aadarshavula2005@gmail.com' and curr_user.get('role') != 'admin':
+        return jsonify({'error': 'Unauthorized. Administrator access required.'}), 403
+
+    data = request.get_json(silent=True) or {}
+    target_email = str(data.get('email', '')).lower().strip()
+
+    if not target_email:
+        return jsonify({'error': 'Target user email is required.'}), 400
+
+    db = get_db()
+    users_col = db['users']
+    res = users_col.update_one(
+        {'email': target_email},
+        {'$set': {'is_logged_out': False}}
+    )
+    if res.matched_count == 0:
+        return jsonify({'error': f'User {target_email} not found in database.'}), 404
+
+    return jsonify({
+        'success': True,
+        'message': f'Active login session for {target_email} has been restored.',
+        'email': target_email
+    }), 200
 
 @app.route('/api/admin/system-health', methods=['GET'])
 def get_system_health():
@@ -1052,14 +1311,11 @@ def get_system_health():
         'uptime_status': 'Operational',
         'python_version': platform.python_version(),
         'platform': platform.system(),
-        'database_mode': 'Mock In-Memory' if is_mock() else 'MongoDB Atlas Cluster',
+        'database_mode': 'MongoDB',
         'metrics': {
             'registered_users': users_col.count_documents({}),
             'total_scans_processed': scans_col.count_documents({}),
-            'api_latency_ms': random.randint(28, 44),
-            'active_workers': 4,
-            'cpu_utilization_pct': random.randint(14, 26),
-            'memory_utilization_pct': 32.8
+            'active_workers': 4
         }
     }), 200
 
