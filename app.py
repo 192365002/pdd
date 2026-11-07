@@ -697,7 +697,7 @@ def scan_image():
                 return jsonify({'status': 'error', 'error': f"Failed to decode base64 image: {str(e)}"}), 400
                 
         elif preset or custom_name:
-            filename = custom_name or ('organic_camera_portrait.jpg' if preset == 'organic' else '1791791650_e12a58d9-0390-4860-b890-639a3752750c.png')
+            filename = custom_name or ('organic_camera_portrait.jpg' if preset == 'organic' else 'ai_synthetic_portrait.png')
             source = f"preset_{preset}" if preset else 'preset'
             candidate_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             if os.path.exists(candidate_path):
