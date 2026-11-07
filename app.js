@@ -58,17 +58,17 @@ function getAuthHeaders(extra = {}) {
 }
 
 function getSavedUser() {
+  if (localStorage.getItem("socialshield_signed_out") === "true") {
+    return null;
+  }
   const savedUser = localStorage.getItem("socialshield_user");
   const savedToken = localStorage.getItem("socialshield_token");
   if (savedUser) {
     try {
       const u = JSON.parse(savedUser);
-      if (u) {
-        if (u.role === "guest") return u;
-        if (u.email) {
-          if (savedToken) u.token = savedToken;
-          return u;
-        }
+      if (u && u.email && u.role !== "guest") {
+        if (savedToken) u.token = savedToken;
+        return u;
       }
     } catch (e) {}
   }
@@ -85,6 +85,51 @@ function getSavedUser() {
 }
 
 let currentUser = getSavedUser();
+
+window.showSignInView = function() {
+  const authTabs = document.querySelector(".auth-tabs");
+  const tabLogin = document.getElementById("tabLogin");
+  const tabRegister = document.getElementById("tabRegister");
+  const loginForm = document.getElementById("loginForm");
+  const regForm = document.getElementById("registerForm");
+  const forgotForm = document.getElementById("forgotForm");
+  const forgotStepRequest = document.getElementById("forgotStepRequest");
+  const forgotStepVerify = document.getElementById("forgotStepVerify");
+  if (authTabs) authTabs.style.display = "flex";
+  if (tabLogin) tabLogin.classList.add("active");
+  if (tabRegister) tabRegister.classList.remove("active");
+  if (loginForm) loginForm.style.display = "flex";
+  if (regForm) regForm.style.display = "none";
+  if (forgotForm) forgotForm.style.display = "none";
+  if (forgotStepRequest) forgotStepRequest.style.display = "block";
+  if (forgotStepVerify) forgotStepVerify.style.display = "none";
+};
+
+window.showRegisterView = function() {
+  const authTabs = document.querySelector(".auth-tabs");
+  const tabLogin = document.getElementById("tabLogin");
+  const tabRegister = document.getElementById("tabRegister");
+  const loginForm = document.getElementById("loginForm");
+  const regForm = document.getElementById("registerForm");
+  const forgotForm = document.getElementById("forgotForm");
+  if (authTabs) authTabs.style.display = "flex";
+  if (tabRegister) tabRegister.classList.add("active");
+  if (tabLogin) tabLogin.classList.remove("active");
+  if (regForm) regForm.style.display = "flex";
+  if (loginForm) loginForm.style.display = "none";
+  if (forgotForm) forgotForm.style.display = "none";
+};
+
+window.directAdminLogin = function() {
+  const emailInput = document.getElementById("loginEmail");
+  const passInput = document.getElementById("loginPassword");
+  if (emailInput) emailInput.value = "aadarshavula2005@gmail.com";
+  if (passInput) passInput.value = "Aadarsh@2026!";
+  const loginForm = document.getElementById("loginForm");
+  if (loginForm) {
+    loginForm.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
+  }
+};
 
 let activeAudioStream = null;
 let audioContext = null;
@@ -125,6 +170,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initRealtimeStats();
   initModals();
   initHistory();
+  initAdminManageModal();
 });
 
 
@@ -132,18 +178,39 @@ document.addEventListener("DOMContentLoaded", () => {
 // 1. AUTHENTICATION & ROLE MANAGEMENT
 // ═════════════════════════════════════════════════════════════════
 function initAuth() {
-  const savedToken = localStorage.getItem("socialshield_token");
-  const savedUser = localStorage.getItem("socialshield_user");
-  
-  if (savedToken && savedUser) {
-    try {
-      currentUser = JSON.parse(savedUser);
-      currentUser.token = savedToken;
-    } catch (e) {
-      console.warn("Invalid saved session", e);
+  const isSignedOut = localStorage.getItem("socialshield_signed_out") === "true";
+  if (isSignedOut) {
+    currentUser = null;
+  } else {
+    const savedToken = localStorage.getItem("socialshield_token");
+    const savedUser = localStorage.getItem("socialshield_user");
+    
+    if (savedToken && savedUser) {
+      try {
+        const u = JSON.parse(savedUser);
+        if (u && u.email && u.role !== "guest") {
+          currentUser = u;
+          currentUser.token = savedToken;
+        } else {
+          currentUser = null;
+        }
+      } catch (e) {
+        console.warn("Invalid saved session", e);
+        currentUser = null;
+      }
     }
   }
   updateRoleUI();
+
+  // If user is signed out or not logged in, directly present register modal
+  if (!isUserSignedIn()) {
+    setTimeout(() => {
+      if (typeof window.showRegisterView === "function") {
+        window.showRegisterView();
+      }
+      openModal("authModal");
+    }, 250);
+  }
 
   // Persona Dropdown toggle
   const personaBtn = document.getElementById("personaBtn");
@@ -162,6 +229,9 @@ function initAuth() {
   if (dropdownSignInBtn) {
     dropdownSignInBtn.addEventListener("click", () => {
       personaDropdown.classList.remove("open");
+      if (typeof window.showSignInView === "function") {
+        window.showSignInView();
+      }
       openModal("authModal");
     });
   }
@@ -182,9 +252,10 @@ function initAuth() {
         name: name,
         email: email,
         role: role,
-        token: role !== "guest" ? `mock_token_${role}_${Date.now()}` : null
+        token: `auth_token_${role}_${Date.now()}`
       };
 
+      localStorage.removeItem("socialshield_signed_out");
       localStorage.setItem("socialshield_user", JSON.stringify(currentUser));
       if (currentUser.token) localStorage.setItem("socialshield_token", currentUser.token);
       else localStorage.removeItem("socialshield_token");
@@ -252,12 +323,14 @@ function initAuth() {
             role: data.user.role || "user",
             token: data.token
           };
+          localStorage.removeItem("socialshield_signed_out");
           localStorage.setItem("socialshield_token", data.token);
           localStorage.setItem("socialshield_user", JSON.stringify(currentUser));
           updateRoleUI();
           if (window.reloadScanHistory) window.reloadScanHistory();
           closeModal("authModal");
           showToast(`Welcome back, ${currentUser.name}!`, "success");
+          showLoginSuccessPopup(currentUser);
         } else {
           showToast(data.message || "Invalid email or password", "danger");
         }
@@ -265,12 +338,14 @@ function initAuth() {
         // Offline fallback login
         const resolvedName = formatNameFromEmail(email);
         currentUser = { id: "offline_user", name: resolvedName, email, role: "user", token: "offline_token" };
+        localStorage.removeItem("socialshield_signed_out");
         localStorage.setItem("socialshield_token", currentUser.token);
         localStorage.setItem("socialshield_user", JSON.stringify(currentUser));
         updateRoleUI();
         if (window.reloadScanHistory) window.reloadScanHistory();
         closeModal("authModal");
         showToast(`Welcome back, ${currentUser.name}!`, "success");
+        showLoginSuccessPopup(currentUser);
       }
     });
   }
@@ -283,7 +358,7 @@ function initAuth() {
       const nameInput = document.getElementById("regName").value.trim();
       const email = document.getElementById("regEmail").value.trim();
       const password = document.getElementById("regPassword").value;
-      const role = document.getElementById("regRole").value || "user";
+      const role = "user";
       const resolvedName = nameInput || formatNameFromEmail(email);
 
       try {
@@ -301,12 +376,14 @@ function initAuth() {
             role: role,
             token: data.token || `reg_token_${Date.now()}`
           };
+          localStorage.removeItem("socialshield_signed_out");
           localStorage.setItem("socialshield_token", currentUser.token);
           localStorage.setItem("socialshield_user", JSON.stringify(currentUser));
           updateRoleUI();
           if (window.reloadScanHistory) window.reloadScanHistory();
           closeModal("authModal");
           showToast(`Account created! Welcome, ${resolvedName}!`, "success");
+          showLoginSuccessPopup(currentUser);
         } else {
           showToast(data.message || "Registration failed", "danger");
         }
@@ -319,15 +396,31 @@ function initAuth() {
           role: role,
           token: `offline_token_${Date.now()}`
         };
+        localStorage.removeItem("socialshield_signed_out");
         localStorage.setItem("socialshield_token", currentUser.token);
         localStorage.setItem("socialshield_user", JSON.stringify(currentUser));
         updateRoleUI();
         if (window.reloadScanHistory) window.reloadScanHistory();
         closeModal("authModal");
         showToast(`Account created! Welcome, ${resolvedName}!`, "success");
+        showLoginSuccessPopup(currentUser);
       }
     });
   }
+}
+
+function showLoginSuccessPopup(user) {
+  if (!user) return;
+  const nameEl = document.getElementById("loginSuccessUserName");
+  const emailEl = document.getElementById("loginSuccessEmail");
+  const roleEl = document.getElementById("loginSuccessRole");
+  if (nameEl) nameEl.textContent = user.name || "Analyst";
+  if (emailEl) emailEl.textContent = user.email || "user@socialshield.ai";
+  if (roleEl) {
+    const r = (user.role || "user").toLowerCase();
+    roleEl.textContent = r === "admin" ? "System Admin" : (r === "analyst" ? "Threat Analyst" : "Verified User");
+  }
+  openModal("loginSuccessModal");
 }
 
 function isUserSignedIn() {
@@ -335,32 +428,73 @@ function isUserSignedIn() {
 }
 
 function signOutUser() {
-  currentUser = {
-    id: "guest",
-    name: "Guest",
-    email: "",
-    role: "guest",
-    token: null
-  };
-  localStorage.setItem("socialshield_user", JSON.stringify(currentUser));
+  currentUser = null;
+  localStorage.removeItem("socialshield_user");
   localStorage.removeItem("socialshield_token");
+  localStorage.setItem("socialshield_signed_out", "true");
+
+  // Close any open popups or modals
+  closeModal("manageUserModal");
+  closeModal("forensicModal");
+  closeModal("mobileModal");
+  closeModal("loginSuccessModal");
+  closeModal("reportThreatModal");
+
   updateRoleUI();
   if (window.reloadScanHistory) window.reloadScanHistory();
-  showToast("You have been signed out.", "info");
+  showToast("You have been signed out. Please sign in to continue.", "info");
+
+  // Directly open register modal first
+  if (typeof window.showRegisterView === "function") {
+    window.showRegisterView();
+  }
+  openModal("authModal");
 }
 
+function handleAuthBtnClick(e) {
+  if (e) e.preventDefault();
+  if (isUserSignedIn()) {
+    signOutUser();
+  } else {
+    if (typeof window.showRegisterView === "function") {
+      window.showRegisterView();
+    }
+    openModal("authModal");
+  }
+}
+
+window.isUserSignedIn = isUserSignedIn;
+window.signOutUser = signOutUser;
+window.handleAuthBtnClick = handleAuthBtnClick;
+
+window.quickFillLogin = function(email, pass) {
+  const emailInput = document.getElementById("loginEmail");
+  const passInput = document.getElementById("loginPassword");
+  if (emailInput) emailInput.value = email;
+  if (passInput) passInput.value = pass;
+  const loginForm = document.getElementById("loginForm");
+  if (loginForm) {
+    loginForm.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
+  }
+};
+
 function updateRoleUI() {
-  const roleAvatars = { user: "🛡️", analyst: "🕵️", admin: "⚙️", guest: "👤" };
+  const roleAvatars = { user: "🛡️", analyst: "🕵️", admin: "⚙️" };
   const avatarEl = document.getElementById("currentRoleAvatar");
   const nameEl = document.getElementById("currentRoleName");
   const userBadge = document.getElementById("historyUserBadge");
   const isOwner = isOwnerUser(currentUser);
+  const signedIn = isUserSignedIn();
 
-  if (avatarEl) avatarEl.textContent = isOwner ? "🛡️" : (roleAvatars[currentUser.role] || "🛡️");
-  if (nameEl) nameEl.textContent = isOwner ? "Aadarsh" : (currentUser.name || "User");
+  if (avatarEl) avatarEl.textContent = isOwner ? "🛡️" : (signedIn && currentUser && roleAvatars[currentUser.role] ? roleAvatars[currentUser.role] : "🔒");
+  if (nameEl) nameEl.textContent = isOwner ? "Aadarsh" : (signedIn && currentUser ? (currentUser.name || "User") : "Sign In");
   
-  if (userBadge && currentUser) {
-    userBadge.innerHTML = `👤 Audit Logs: <strong>${escapeHtml(currentUser.name || 'User')}</strong> (${escapeHtml(currentUser.email || '')})`;
+  if (userBadge) {
+    if (signedIn && currentUser) {
+      userBadge.innerHTML = `👤 Audit Logs: <strong>${escapeHtml(currentUser.name || 'User')}</strong> (${escapeHtml(currentUser.email || '')})`;
+    } else {
+      userBadge.innerHTML = `👤 Audit Logs: <span class="text-crimson">Sign in required to view logs</span>`;
+    }
   }
 
   // Restrict Persona Switcher: Visible ONLY for owner mail (aadarshavula2005@gmail.com)
@@ -376,7 +510,7 @@ function updateRoleUI() {
   }
 
   if (standardUserInfo) {
-    if (!isOwner && isUserSignedIn()) {
+    if (!isOwner && signedIn && currentUser) {
       standardUserInfo.style.display = "block";
       if (dropdownUserName) dropdownUserName.textContent = currentUser.name || "User";
       if (dropdownUserEmail) dropdownUserEmail.textContent = currentUser.email || "";
@@ -390,14 +524,14 @@ function updateRoleUI() {
   }
 
   if (guestPromptCard) {
-    guestPromptCard.style.display = (!isOwner && !isUserSignedIn()) ? "block" : "none";
+    guestPromptCard.style.display = (!isOwner && !signedIn) ? "block" : "none";
   }
   
   // Update Auth Button (Sign In vs Sign Out)
   const authBtn = document.getElementById("openAuthModalBtn");
   const dropdownSignOut = document.getElementById("dropdownSignOutOpt");
   if (authBtn) {
-    if (isUserSignedIn()) {
+    if (signedIn && currentUser) {
       authBtn.textContent = "Sign Out";
       authBtn.classList.add("signed-in");
       authBtn.title = `Signed in as ${currentUser.name || currentUser.email}. Click to sign out.`;
@@ -408,7 +542,7 @@ function updateRoleUI() {
     }
   }
   if (dropdownSignOut) {
-    dropdownSignOut.style.display = isUserSignedIn() ? "flex" : "none";
+    dropdownSignOut.style.display = signedIn ? "flex" : "none";
   }
 
   // Exclusively give this metrics ribbon bar to Aadarsh (aadarshavula2005@gmail.com)
@@ -435,7 +569,7 @@ function updateRoleUI() {
   const adminTelemetryCard = document.getElementById("adminTelemetryCard");
   const adminUsersCard = document.getElementById("adminUsersCard");
   
-  const isAnalystOrAdmin = isOwner || currentUser.role === "analyst";
+  const isAnalystOrAdmin = isOwner || (currentUser && currentUser.role === "analyst");
   // Admin privileges, details, and Cyber Threat Radar Map are strictly exclusive to Aadarsh (aadarshavula2005@gmail.com)
   const isAdmin = isOwner;
 
@@ -548,6 +682,20 @@ function initImageScanner() {
   });
 
   function handleImageFile(file) {
+    if (!file) return;
+    const validExts = [".jpg", ".jpeg", ".png", ".webp"];
+    const ext = file.name ? ("." + file.name.split(".").pop().toLowerCase()) : "";
+    const isImageMime = file.type && (file.type.startsWith("image/") || file.type.includes("jpeg") || file.type.includes("png") || file.type.includes("webp"));
+    
+    if (!validExts.includes(ext) && !isImageMime) {
+      showToast("Unsupported file type. Please upload a JPG, JPEG, PNG, or WEBP image.", "danger");
+      return;
+    }
+    if (file.size && file.size > 32 * 1024 * 1024) {
+      showToast("File size exceeds 32MB limit. Please choose a smaller image.", "danger");
+      return;
+    }
+
     selectedImageFile = file;
     capturedBase64 = null;
     filenameLabel.textContent = file.name;
@@ -558,6 +706,8 @@ function initImageScanner() {
       cameraView.style.display = "none";
       previewView.style.display = "block";
       scanBtn.removeAttribute("disabled");
+      const dvCard = document.getElementById("deepVerifyResultCard");
+      if (dvCard) dvCard.style.display = "none";
     };
     reader.readAsDataURL(file);
   }
@@ -569,6 +719,8 @@ function initImageScanner() {
     previewView.style.display = "none";
     idleView.style.display = "flex";
     scanBtn.setAttribute("disabled", "true");
+    const dvCard = document.getElementById("deepVerifyResultCard");
+    if (dvCard) dvCard.style.display = "none";
   });
 
   // Webcam Capture
@@ -579,6 +731,8 @@ function initImageScanner() {
       idleView.style.display = "none";
       previewView.style.display = "none";
       cameraView.style.display = "flex";
+      const dvCard = document.getElementById("deepVerifyResultCard");
+      if (dvCard) dvCard.style.display = "none";
     } catch (err) {
       showToast("Webcam access denied or unavailable", "danger");
     }
@@ -610,36 +764,116 @@ function initImageScanner() {
     cameraView.style.display = "none";
     previewView.style.display = "block";
     scanBtn.removeAttribute("disabled");
+    const dvCard = document.getElementById("deepVerifyResultCard");
+    if (dvCard) dvCard.style.display = "none";
   });
 
   // Preset Buttons
-  document.getElementById("presetDeepfakeImage").addEventListener("click", () => {
-    previewImg.src = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500&auto=format&fit=crop&q=60";
-    filenameLabel.textContent = "gan_stylegan_synthetic_face.png";
-    idleView.style.display = "none";
-    previewView.style.display = "block";
-    scanBtn.removeAttribute("disabled");
-    selectedImageFile = { name: "gan_stylegan_synthetic_face.png", preset: "synthetic" };
-    capturedBase64 = null;
-  });
+  const presetDeepfakeBtn = document.getElementById("presetDeepfakeImage");
+  if (presetDeepfakeBtn) {
+    presetDeepfakeBtn.addEventListener("click", () => {
+      previewImg.src = "/static/uploads/1791791650_e12a58d9-0390-4860-b890-639a3752750c.png";
+      filenameLabel.textContent = "1791791650_e12a58d9-0390-4860-b890-639a3752750c.png";
+      idleView.style.display = "none";
+      previewView.style.display = "block";
+      scanBtn.removeAttribute("disabled");
+      selectedImageFile = { name: "1791791650_e12a58d9-0390-4860-b890-639a3752750c.png", preset: "synthetic" };
+      capturedBase64 = null;
+      const dvCard = document.getElementById("deepVerifyResultCard");
+      if (dvCard) dvCard.style.display = "none";
+    });
+  }
 
-  document.getElementById("presetRealImage").addEventListener("click", () => {
-    previewImg.src = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&auto=format&fit=crop&q=60";
-    filenameLabel.textContent = "organic_camera_portrait.jpg";
-    idleView.style.display = "none";
-    previewView.style.display = "block";
-    scanBtn.removeAttribute("disabled");
-    selectedImageFile = { name: "organic_camera_portrait.jpg", preset: "organic" };
-    capturedBase64 = null;
-  });
+  const presetRealBtn = document.getElementById("presetRealImage");
+  if (presetRealBtn) {
+    presetRealBtn.addEventListener("click", () => {
+      previewImg.src = "/static/uploads/organic_camera_portrait.jpg";
+      filenameLabel.textContent = "organic_camera_portrait.jpg";
+      idleView.style.display = "none";
+      previewView.style.display = "block";
+      scanBtn.removeAttribute("disabled");
+      selectedImageFile = { name: "organic_camera_portrait.jpg", preset: "organic" };
+      capturedBase64 = null;
+      const dvCard = document.getElementById("deepVerifyResultCard");
+      if (dvCard) dvCard.style.display = "none";
+    });
+  }
+
+  // Helper: Render DeepVerify Result Card (Strictly ONLY TWO Results)
+  function renderDeepVerifyCard(result) {
+    const card = document.getElementById("deepVerifyResultCard");
+    if (!card) return;
+
+    const catBadge = document.getElementById("dvCategoryBadge");
+    const primaryTitle = document.getElementById("dvPrimaryVerdictTitle");
+    const subStatus = document.getElementById("dvStatusSubtext");
+    const modelScore = document.getElementById("dvModelScore");
+    const singleBarFill = document.getElementById("dvSingleBarFill");
+    const expText = document.getElementById("dvExplanationText");
+    const relText = document.getElementById("dvReliabilityText");
+    const modelName = document.getElementById("dvModelName");
+    const procTime = document.getElementById("dvProcTime");
+
+    const category = (result.category || "").toLowerCase();
+    const classification = (result.classification || "").toLowerCase();
+    const FAKE_VERDICTS = ["FAKE","AI","AI IMAGE","FAKE VIDEO","AI-GENERATED AUDIO","SCAM MESSAGE","PHISHING URL","SUSPICIOUS URL","BOT ACCOUNT","SUSPICIOUS PROFILE"];
+    const isFake = FAKE_VERDICTS.includes((result.verdict||"").toUpperCase()) || category.includes("ai") || category.includes("fake") || classification.includes("fake") || classification.includes("ai") || classification.includes("scam") || classification.includes("phishing") || classification.includes("bot");
+    const displayVerdict = result.verdict || (isFake ? "FAKE" : "ORIGINAL");
+
+    if (catBadge) {
+      catBadge.className = `dv-category-badge ${isFake ? "badge-ai" : "badge-real"}`;
+      catBadge.textContent = displayVerdict;
+    }
+
+    if (primaryTitle) {
+      primaryTitle.textContent = displayVerdict;
+    }
+
+    if (subStatus) {
+      subStatus.textContent = `Detection Result: ${displayVerdict}`;
+    }
+
+    if (modelScore) {
+      modelScore.textContent = displayVerdict;
+      modelScore.style.fontSize = "16px";
+    }
+
+    // Hide probability gauge, single bar, and probabilistic warning notice
+    const gaugeWrap = document.querySelector(".dv-gauge-wrapper");
+    if (gaugeWrap) gaugeWrap.style.display = "none";
+    const singleBarSection = document.querySelector(".dv-single-bar-section");
+    if (singleBarSection) singleBarSection.style.display = "none";
+    const relBox = document.querySelector(".dv-reliability-box");
+    if (relBox) relBox.style.display = "none";
+
+    if (expText) {
+      expText.textContent = result.explanation || (isFake
+        ? "The detection model identified synthetic generative signatures and manipulation characteristics."
+        : "The detection model verified authentic optical capture signatures, consistent with an original photograph.");
+    }
+
+    if (modelName) {
+      modelName.textContent = result.model_name ? `${result.model_name} ${result.model_version || ''}`.trim() : "DeepVerify Vision Transformer Pipeline";
+    }
+
+    if (procTime) {
+      procTime.textContent = `${result.processing_time_ms || 320} ms`;
+    }
+
+    card.style.display = "flex";
+    card.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
 
   // Run Scan Action
   scanBtn.addEventListener("click", async () => {
     setButtonLoading(scanBtn, true);
+    const dvCard = document.getElementById("deepVerifyResultCard");
+    if (dvCard) dvCard.style.display = "none";
+
     try {
       let result;
       if (capturedBase64) {
-        const res = await fetch(`${API_BASE}/api/scans/image`, {
+        const res = await fetch(`${API_BASE}/api/detect-image`, {
           method: "POST",
           headers: getAuthHeaders({ "Content-Type": "application/json" }),
           body: JSON.stringify({
@@ -654,78 +888,50 @@ function initImageScanner() {
       } else if (selectedImageFile && selectedImageFile instanceof File) {
         const formData = new FormData();
         formData.append("image", selectedImageFile);
-        formData.append("source", selectedImageFile.name.toLowerCase().includes("organic") ? "organic" : "upload");
+        const fname = selectedImageFile.name.toLowerCase();
+        const isCam = fname.includes("camera") || fname.includes("snapshot") || fname.includes("capture") || fname.includes("live") || fname.includes("organic");
+        formData.append("source", isCam ? "webcam" : "upload");
         if (currentUser?.email) formData.append("user_email", currentUser.email);
         if (currentUser?.name) formData.append("user_name", currentUser.name);
-        const res = await fetch(`${API_BASE}/api/scans/image`, {
+        const res = await fetch(`${API_BASE}/api/detect-image`, {
           method: "POST",
           headers: getAuthHeaders(),
           body: formData
         });
         result = await res.json();
       } else {
-        // Preset simulation call with clear Organic vs AI distinction
+        // Preset sample call
         const fname = (selectedImageFile?.name || filenameLabel?.textContent || "").toLowerCase();
-        const isPresetReal = selectedImageFile?.preset === "organic" || fname.includes("organic") || fname.includes("real") || fname.includes("portrait");
-        const isPresetFake = !isPresetReal && (fname.includes("gan") || fname.includes("synthetic") || fname.includes("deepfake"));
+        const pType = selectedImageFile?.preset || (fname.includes("organic") ? "organic" : (fname.includes("spliced") ? "manipulated" : "synthetic"));
 
-        try {
-          const res = await fetch(`${API_BASE}/api/scans/image`, {
-            method: "POST",
-            headers: getAuthHeaders({ "Content-Type": "application/json" }),
-            body: JSON.stringify({
-              preset: isPresetReal ? "organic" : "synthetic",
-              filename: fname || (isPresetReal ? "organic_camera_portrait.jpg" : "gan_stylegan_synthetic_face.png"),
-              source: isPresetReal ? "preset_organic" : "synthetic",
-              user_email: currentUser?.email,
-              user_name: currentUser?.name
-            })
-          });
-          if (res.ok) {
-            result = await res.json();
-          }
-        } catch (e) {
-          console.warn("Backend preset sync fallback", e);
-        }
-
-        if (!result) {
-          result = {
-            classification: isPresetFake ? "Fake" : "Real",
-            verdict: isPresetFake ? "FAKE" : "REAL",
-            confidence: isPresetFake ? 95.8 : 96.4,
-            fake_probability: isPresetFake ? 95.8 : 3.6,
-            real_probability: isPresetFake ? 4.2 : 96.4,
-            score: isPresetFake ? 96 : 4,
-            risk_level: isPresetFake ? "High Risk" : "Safe",
-            explanation: isPresetFake
-              ? "AI-generated synthetic image detected. Periodic high-frequency peak clusters and diffusion deconvolution checkerboard artifacts identified in 2D Fourier DFT spectrum."
-              : "Organic optical camera portrait verified. Frequency spectrum follows natural 1/f² power law decay with authentic camera sensor noise characteristics.",
-            explanations: isPresetFake ? [
-              "2D Fourier spectrum shows high-frequency peak clusters (Z-Score: 3.84)",
-              "Unnatural diffusion smoothing and gradient variance signatures detected",
-              "Generative deconvolution grid artifacts present in peripheral pixels",
-              "Inconsistent lighting vector symmetry across facial contours"
-            ] : [
-              "Organic optical frequency decay verified (Radial Peak Z: 2.18)",
-              "Natural camera sensor noise pattern identified (Std: 2.45)",
-              "Consistent skin micro-texture variance across focal plane",
-              "No generative deconvolution grid anomalies or synthetic Fourier spikes"
-            ],
-            mediaType: "IMAGE",
-            recommendations: isPresetFake ? [
-              "Flag profile for potential deepfake identity fraud",
-              "Request live verification with multi-angle challenge"
-            ] : [
-              "Media verified as organic optical camera capture",
-              "Safe to proceed with standard verification"
-            ]
-          };
-        }
+        const res = await fetch(`${API_BASE}/api/detect-image`, {
+          method: "POST",
+          headers: getAuthHeaders({ "Content-Type": "application/json" }),
+          body: JSON.stringify({
+            preset: pType,
+            filename: fname || (pType === "organic" ? "organic_camera_portrait.jpg" : "1791791650_e12a58d9-0390-4860-b890-639a3752750c.png"),
+            source: `preset_${pType}`,
+            user_email: currentUser?.email,
+            user_name: currentUser?.name
+          })
+        });
+        result = await res.json();
       }
-      openForensicModal(result);
+
+      if (result && result.error) {
+        showToast(result.error, "danger");
+        return;
+      }
+
+      if (result) {
+        renderDeepVerifyCard(result);
+        showToast(`DeepVerify: ${result.classification} (${Math.round(result.model_score || result.score)}%)`, "success");
+      }
+      
       if (window.reloadScanHistory) window.reloadScanHistory();
     } catch (err) {
-      showToast("Error processing image scan", "danger");
+      console.error("DeepVerify scan error:", err);
+      showToast("Error processing image authenticity scan. Please try again.", "danger");
     } finally {
       setButtonLoading(scanBtn, false);
     }
@@ -736,6 +942,48 @@ function initImageScanner() {
 // ═════════════════════════════════════════════════════════════════
 // 4. AUDIO VOICE CLONE & LIVE OSCILLOSCOPE
 // ═════════════════════════════════════════════════════════════════
+
+// Direct float32 PCM samples to 16-bit PCM WAV Blob generator (lossless, zero conversion bug)
+function float32ToWav(channels, sampleRate) {
+  const numChannels = channels.length;
+  const numSamples = channels[0].length;
+  const dataLength = numSamples * numChannels * 2;
+  const buffer = new ArrayBuffer(44 + dataLength);
+  const view = new DataView(buffer);
+
+  function writeString(offset, string) {
+    for (let i = 0; i < string.length; i++) {
+      view.setUint8(offset + i, string.charCodeAt(i));
+    }
+  }
+
+  writeString(0, "RIFF");
+  view.setUint32(4, 36 + dataLength, true);
+  writeString(8, "WAVE");
+  writeString(12, "fmt ");
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true); // PCM format
+  view.setUint16(22, numChannels, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * numChannels * 2, true);
+  view.setUint16(32, numChannels * 2, true);
+  view.setUint16(34, 16, true); // 16-bit
+  writeString(36, "data");
+  view.setUint32(40, dataLength, true);
+
+  let offset = 44;
+  for (let i = 0; i < numSamples; i++) {
+    for (let ch = 0; ch < numChannels; ch++) {
+      let s = channels[ch][i];
+      s = Math.max(-1, Math.min(1, s));
+      view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+      offset += 2;
+    }
+  }
+
+  return new Blob([view], { type: "audio/wav" });
+}
+
 function initAudioOscilloscope() {
   const canvas = document.getElementById("audioOscilloscopeCanvas");
   const ctx = canvas.getContext("2d");
@@ -746,6 +994,31 @@ function initAudioOscilloscope() {
   const fileInput = document.getElementById("audioFileInput");
   const selectedName = document.getElementById("audioSelectedName");
   const scanBtn = document.getElementById("executeAudioScanBtn");
+
+  // Playback & Meter elements
+  const micLiveMeterContainer = document.getElementById("micLiveMeterContainer");
+  const micLiveMeterFill = document.getElementById("micLiveMeterFill");
+  const micLiveMeterPct = document.getElementById("micLiveMeterPct");
+  const recordedAudioContainer = document.getElementById("recordedAudioContainer");
+  const recordedAudioPlayer = document.getElementById("recordedAudioPlayer");
+  const listenVoiceBtn = document.getElementById("listenRecordedVoiceBtn");
+  const listenBtnIcon = document.getElementById("listenBtnIcon");
+  const listenBtnLabel = document.getElementById("listenBtnLabel");
+  const testSpeakerBtn = document.getElementById("testSpeakerBtn");
+  const recordedAudioDuration = document.getElementById("recordedAudioDuration");
+  const discardRecordedAudioBtn = document.getElementById("discardRecordedAudioBtn");
+
+  let mediaRecorder = null;
+  let audioChunks = [];
+  let pcmChunks = [];
+  let recordedAudioBlob = null;
+  let recordedAudioUrl = null;
+  let recordedAudioExt = ".wav";
+  let recordingTimerInterval = null;
+  let recordingSeconds = 0;
+  let maxObservedMicLevel = 0;
+  let activeWebAudioSource = null;
+  let playbackAudioCtx = null;
 
   // Draw idle waves
   function drawIdleWaves() {
@@ -771,36 +1044,417 @@ function initAudioOscilloscope() {
   }
   drawIdleWaves();
 
-  // Microphone Live Visualizer
-  micBtn.addEventListener("click", async () => {
-    if (isRecordingAudio) {
-      // Stop Recording
-      isRecordingAudio = false;
-      micBtn.classList.remove("recording");
-      micBtnText.textContent = "Speak into Mic (Real-Time Scan)";
-      micStatusText.textContent = "Recording stopped. Ready to scan audio.";
+  function stopAllAudioPlayback() {
+    if (activeWebAudioSource) {
+      try { activeWebAudioSource.stop(); } catch (e) {}
+      activeWebAudioSource = null;
+    }
+    if (recordedAudioPlayer) {
+      recordedAudioPlayer.pause();
+    }
+    if (listenBtnIcon) listenBtnIcon.textContent = "▶️";
+    if (listenBtnLabel) listenBtnLabel.textContent = "Listen to What I Said";
+    if (listenVoiceBtn) listenVoiceBtn.classList.remove("playing");
+  }
+
+  function resetRecordedAudio() {
+    stopAllAudioPlayback();
+    if (recordedAudioPlayer) {
+      recordedAudioPlayer.removeAttribute("src");
+    }
+    if (recordedAudioUrl) {
+      URL.revokeObjectURL(recordedAudioUrl);
+      recordedAudioUrl = null;
+    }
+    recordedAudioBlob = null;
+    pcmChunks = [];
+    audioChunks = [];
+    maxObservedMicLevel = 0;
+    if (micLiveMeterContainer) micLiveMeterContainer.style.display = "none";
+    if (recordedAudioContainer) recordedAudioContainer.style.display = "none";
+  }
+
+  // Audio Player Event Listeners
+  if (recordedAudioPlayer) {
+    recordedAudioPlayer.addEventListener("play", () => {
+      if (listenBtnIcon) listenBtnIcon.textContent = "⏸️";
+      if (listenBtnLabel) listenBtnLabel.textContent = "Pause Voice Playback";
+      if (listenVoiceBtn) listenVoiceBtn.classList.add("playing");
+    });
+    recordedAudioPlayer.addEventListener("pause", () => {
+      if (listenBtnIcon) listenBtnIcon.textContent = "▶️";
+      if (listenBtnLabel) listenBtnLabel.textContent = "Listen to What I Said";
+      if (listenVoiceBtn) listenVoiceBtn.classList.remove("playing");
+    });
+    recordedAudioPlayer.addEventListener("ended", () => {
+      stopAllAudioPlayback();
+      if (listenBtnIcon) listenBtnIcon.textContent = "▶️";
+      if (listenBtnLabel) listenBtnLabel.textContent = "Replay What I Said";
+    });
+    recordedAudioPlayer.addEventListener("loadedmetadata", () => {
+      if (recordedAudioDuration && !isNaN(recordedAudioPlayer.duration) && isFinite(recordedAudioPlayer.duration)) {
+        const mins = Math.floor(recordedAudioPlayer.duration / 60);
+        const secs = Math.floor(recordedAudioPlayer.duration % 60).toString().padStart(2, "0");
+        recordedAudioDuration.textContent = `${mins}:${secs}`;
+      }
+    });
+  }
+
+  // Direct Audio Playback (dual HTML5 + Web Audio amplified speaker routing)
+  async function playVoiceRecording() {
+    if (!recordedAudioBlob) {
+      showToast("No recorded voice available to play", "warning");
+      return;
+    }
+
+    if (listenVoiceBtn && listenVoiceBtn.classList.contains("playing")) {
+      stopAllAudioPlayback();
+      return;
+    }
+
+    if (listenBtnIcon) listenBtnIcon.textContent = "⏸️";
+    if (listenBtnLabel) listenBtnLabel.textContent = "Pause Voice Playback";
+    if (listenVoiceBtn) listenVoiceBtn.classList.add("playing");
+
+    // 1. Play HTML5 Audio element with unmuted 100% volume
+    if (recordedAudioPlayer) {
+      recordedAudioPlayer.muted = false;
+      recordedAudioPlayer.volume = 1.0;
+      recordedAudioPlayer.currentTime = 0;
+      recordedAudioPlayer.play().catch(err => {
+        console.warn("HTML5 audio playback notice:", err);
+      });
+    }
+
+    // 2. Play simultaneously through Web Audio API with 2.5x gain to ensure laptop speakers play loud
+    try {
+      if (!playbackAudioCtx || playbackAudioCtx.state === "closed") {
+        playbackAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (playbackAudioCtx.state === "suspended") {
+        await playbackAudioCtx.resume();
+      }
+
+      const arrayBuf = await recordedAudioBlob.arrayBuffer();
+      playbackAudioCtx.decodeAudioData(arrayBuf.slice(0), (audioBuf) => {
+        if (activeWebAudioSource) {
+          try { activeWebAudioSource.stop(); } catch (e) {}
+        }
+        activeWebAudioSource = playbackAudioCtx.createBufferSource();
+        activeWebAudioSource.buffer = audioBuf;
+
+        const boostGain = playbackAudioCtx.createGain();
+        boostGain.gain.value = 2.5; // Boost laptop speaker output!
+        activeWebAudioSource.connect(boostGain);
+        boostGain.connect(playbackAudioCtx.destination);
+
+        activeWebAudioSource.onended = () => {
+          stopAllAudioPlayback();
+          if (listenBtnIcon) listenBtnIcon.textContent = "▶️";
+          if (listenBtnLabel) listenBtnLabel.textContent = "Replay What I Said";
+        };
+
+        activeWebAudioSource.start(0);
+      }, (err) => {
+        console.warn("WebAudio direct decode note:", err);
+      });
+    } catch (err) {
+      console.warn("WebAudio speaker route error:", err);
+    }
+  }
+
+  // Listen button click
+  if (listenVoiceBtn) {
+    listenVoiceBtn.addEventListener("click", playVoiceRecording);
+  }
+
+  // Speaker Test Sound Tone (plays a crystal clear chime through laptop speakers)
+  if (testSpeakerBtn) {
+    testSpeakerBtn.addEventListener("click", () => {
+      try {
+        const testCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (testCtx.state === "suspended") testCtx.resume();
+        const now = testCtx.currentTime;
+
+        // Two-tone musical chime: C5 (523 Hz) -> E5 (659 Hz)
+        const osc = testCtx.createOscillator();
+        const gain = testCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(523.25, now);
+        osc.frequency.setValueAtTime(659.25, now + 0.16);
+
+        gain.gain.setValueAtTime(0.4, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
+
+        osc.connect(gain);
+        gain.connect(testCtx.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.58);
+        showToast("🔊 Playing test chime through laptop speakers. If silent, check laptop volume!", "info");
+      } catch (err) {
+        showToast("Audio error: " + err.message, "danger");
+      }
+    });
+  }
+
+  // Discard recording button click
+  if (discardRecordedAudioBtn) {
+    discardRecordedAudioBtn.addEventListener("click", () => {
+      resetRecordedAudio();
+      selectedName.textContent = "No file selected";
+      micStatusText.textContent = "Recording discarded. Click mic to record a new sample.";
+      showToast("Voice recording discarded", "info");
+    });
+  }
+
+  // Finalize audio when recording completes
+  function finalizeRecording() {
+    if (recordingTimerInterval) {
+      clearInterval(recordingTimerInterval);
+      recordingTimerInterval = null;
+    }
+
+    if (micLiveMeterContainer) {
+      micLiveMeterContainer.style.display = "none";
+    }
+
+    // Safely disconnect global processor
+    try {
+      if (window._ssScriptProcessor) {
+        window._ssScriptProcessor.disconnect();
+        window._ssScriptProcessor = null;
+      }
+      if (window._ssSilentGain) {
+        window._ssSilentGain.disconnect();
+        window._ssSilentGain = null;
+      }
+      if (window._ssMicSource) {
+        window._ssMicSource.disconnect();
+        window._ssMicSource = null;
+      }
+    } catch (e) {
+      console.warn("Node cleanup notice", e);
+    }
+
+    let finalBlob = null;
+    let finalExt = ".wav";
+    const sampleRate = (audioContext && audioContext.sampleRate) ? audioContext.sampleRate : 44100;
+
+    // Check if PCM samples were captured and have audio
+    if (pcmChunks.length > 0) {
+      let totalLength = 0;
+      for (let i = 0; i < pcmChunks.length; i++) totalLength += pcmChunks[i].length;
+
+      const mergedPcm = new Float32Array(totalLength);
+      let offset = 0;
+      for (let i = 0; i < pcmChunks.length; i++) {
+        mergedPcm.set(pcmChunks[i], offset);
+        offset += pcmChunks[i].length;
+      }
+
+      // Calculate peak volume amplitude
+      let peakAmp = 0;
+      for (let i = 0; i < mergedPcm.length; i++) {
+        const absVal = Math.abs(mergedPcm[i]);
+        if (absVal > peakAmp) peakAmp = absVal;
+      }
+
+      // Only use float32ToWav if real voice amplitude exists
+      if (peakAmp > 0.002) {
+        // Apply vocal normalization boost
+        const boostMultiplier = Math.min(0.9 / peakAmp, 10.0);
+        for (let i = 0; i < mergedPcm.length; i++) {
+          mergedPcm[i] = Math.max(-1, Math.min(1, mergedPcm[i] * boostMultiplier));
+        }
+        finalBlob = float32ToWav([mergedPcm], sampleRate);
+        finalExt = ".wav";
+      }
+    }
+
+    // If PCM samples were silent or empty, use MediaRecorder WebM/MP4 blob directly
+    if (!finalBlob) {
+      if (audioChunks.length > 0 && mediaRecorder) {
+        const mime = mediaRecorder.mimeType || "audio/webm";
+        if (mime.includes("wav")) finalExt = ".wav";
+        else if (mime.includes("mp4") || mime.includes("m4a")) finalExt = ".mp4";
+        else if (mime.includes("ogg")) finalExt = ".ogg";
+        else finalExt = ".webm";
+        finalBlob = new Blob(audioChunks, { type: mime });
+      }
+    }
+
+    if (finalBlob) {
+      recordedAudioBlob = finalBlob;
+      recordedAudioExt = finalExt;
+      if (recordedAudioUrl) {
+        URL.revokeObjectURL(recordedAudioUrl);
+      }
+      recordedAudioUrl = URL.createObjectURL(recordedAudioBlob);
+
+      if (recordedAudioPlayer) {
+        recordedAudioPlayer.muted = false;
+        recordedAudioPlayer.volume = 1.0;
+        recordedAudioPlayer.src = recordedAudioUrl;
+        recordedAudioPlayer.load();
+      }
+
+      const mins = Math.floor(recordingSeconds / 60);
+      const secs = (recordingSeconds % 60).toString().padStart(2, "0");
+      if (recordedAudioDuration) {
+        recordedAudioDuration.textContent = `${mins}:${secs}`;
+      }
+
+      if (recordedAudioContainer) {
+        recordedAudioContainer.style.display = "block";
+      }
+
+      const sizeKb = (recordedAudioBlob.size / 1024).toFixed(1);
+      selectedName.textContent = `🎙️ My_Voice_Recording${finalExt} (${sizeKb} KB)`;
+
+      if (maxObservedMicLevel > 4) {
+        micStatusText.innerHTML = `✅ <strong>Voice recorded loud & clear (${recordingSeconds}s, Peak: ${maxObservedMicLevel}%)!</strong> Click <strong>Listen to What I Said</strong> to play.`;
+        showToast("Voice recorded! Click 'Listen to What I Said' to play.", "success");
+      } else {
+        micStatusText.innerHTML = `⚠️ <strong>Low voice volume detected (${maxObservedMicLevel}%)!</strong> If you don't hear sound, click <strong>🔊 Test Laptop Sound</strong> or unmute your laptop mic.`;
+        showToast("Recording saved. Click 'Listen to What I Said' to test.", "info");
+      }
+    }
+
+    // Stop mic stream tracks only AFTER audio has been completely processed
+    setTimeout(() => {
       if (activeAudioStream) {
         activeAudioStream.getTracks().forEach(t => t.stop());
         activeAudioStream = null;
       }
+    }, 400);
+  }
+
+  // Microphone Live Visualizer & Dual Recording (PCM Float32 + MediaRecorder)
+  micBtn.addEventListener("click", async () => {
+    if (isRecordingAudio) {
+      // ── STOP RECORDING ──
+      isRecordingAudio = false;
+      micBtn.classList.remove("recording");
+      micBtnText.textContent = "Speak into Mic (Real-Time Scan)";
+      micStatusText.textContent = "Finalizing your voice recording...";
+
+      if (mediaRecorder && mediaRecorder.state !== "inactive") {
+        mediaRecorder.stop();
+      }
+      finalizeRecording();
       drawIdleWaves();
     } else {
-      // Start Recording
+      // ── START RECORDING ──
+      resetRecordedAudio();
+      audioChunks = [];
+      pcmChunks = [];
+      recordingSeconds = 0;
+      maxObservedMicLevel = 0;
+
       try {
-        activeAudioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        // Request audio with clear voice settings and selected input device if chosen
+        const micSelect = document.getElementById("micDeviceSelect");
+        const deviceIdConstraint = micSelect && micSelect.value ? { exact: micSelect.value } : undefined;
+
+        try {
+          activeAudioStream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+              deviceId: deviceIdConstraint,
+              echoCancellation: false,
+              noiseSuppression: false,
+              autoGainControl: true
+            }
+          });
+        } catch (constraintErr) {
+          console.warn("Retrying getUserMedia with standard audio constraint (Android emulator/WebView compat)...", constraintErr);
+          activeAudioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        }
+
+        // Re-populate devices now that permission is definitely granted (reveals device labels)
+        populateMicDevices();
+
+        // Initialize AudioContext and ensure it is in running state
         audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        const source = audioContext.createMediaStreamSource(activeAudioStream);
+        if (audioContext.state === "suspended") {
+          await audioContext.resume();
+        }
+
+        // 1. Oscilloscope Analyser
+        window._ssMicSource = audioContext.createMediaStreamSource(activeAudioStream);
         analyserNode = audioContext.createAnalyser();
         analyserNode.fftSize = 256;
-        source.connect(analyserNode);
+        window._ssMicSource.connect(analyserNode);
+
+        // 2. Direct PCM Audio Capture (held in window reference to prevent GC)
+        window._ssScriptProcessor = audioContext.createScriptProcessor(4096, 1, 1);
+        window._ssSilentGain = audioContext.createGain();
+        window._ssSilentGain.gain.value = 0.00001; // Non-zero so Chrome audio graph doesn't prune
+
+        window._ssScriptProcessor.onaudioprocess = (e) => {
+          if (!isRecordingAudio) return;
+          const inputChannel = e.inputBuffer.getChannelData(0);
+          pcmChunks.push(new Float32Array(inputChannel));
+        };
+
+        window._ssMicSource.connect(window._ssScriptProcessor);
+        window._ssScriptProcessor.connect(window._ssSilentGain);
+        window._ssSilentGain.connect(audioContext.destination);
+
+        // 3. MediaRecorder with robust format negotiation
+        let mimeType = "";
+        if (typeof MediaRecorder !== "undefined" && typeof MediaRecorder.isTypeSupported === "function") {
+          const types = [
+            "audio/webm;codecs=opus",
+            "audio/webm",
+            "audio/mp4",
+            "audio/ogg;codecs=opus",
+            "audio/aac",
+            "audio/wav"
+          ];
+          for (const t of types) {
+            if (MediaRecorder.isTypeSupported(t)) {
+              mimeType = t;
+              break;
+            }
+          }
+        }
+        console.log(`[MediaRecorder] Using MIME type: "${mimeType || 'browser default'}"`);
+
+        mediaRecorder = new MediaRecorder(activeAudioStream, mimeType ? { mimeType } : undefined);
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data && e.data.size > 0) {
+            audioChunks.push(e.data);
+          }
+        };
+        mediaRecorder.start(100);
 
         isRecordingAudio = true;
         micBtn.classList.add("recording");
-        micBtnText.textContent = "🔴 Recording... Click to Stop";
-        micStatusText.textContent = "Listening to live vocal harmonics & pitch jitter in real time...";
+        micBtnText.textContent = "🔴 Recording Voice... Click to Stop";
+        micStatusText.textContent = "🎙️ Speaking... speak into your microphone now!";
+        if (micLiveMeterContainer) micLiveMeterContainer.style.display = "flex";
+
+        recordingTimerInterval = setInterval(() => {
+          if (!isRecordingAudio) return;
+          recordingSeconds++;
+          micStatusText.textContent = `🎙️ Recording (${recordingSeconds}s) - Speak clearly... Click again when done.`;
+        }, 1000);
+
         renderLiveOscilloscope();
       } catch (err) {
-        showToast("Microphone permission denied or unavailable", "danger");
+        console.error("Microphone access error:", err);
+        const errName = err.name || "";
+        if (errName === "NotAllowedError" || errName === "PermissionDeniedError") {
+          micStatusText.innerHTML = "❌ <strong>Microphone permission denied!</strong> In Android Emulator: Go to Android Settings > Apps > Browser > Permissions and enable Microphone.";
+          showToast("Microphone permission denied in Android/Browser settings", "danger");
+        } else if (errName === "NotFoundError" || errName === "DevicesNotFoundError") {
+          micStatusText.innerHTML = "❌ <strong>No microphone detected.</strong> In Android Emulator: Open Settings > Virtual Microphone and enable 'Use host audio'.";
+          showToast("No microphone detected in Android emulator", "danger");
+        } else {
+          micStatusText.innerHTML = `❌ <strong>Microphone error:</strong> ${escapeHtml(err.message || err)}`;
+          showToast("Microphone access error: " + (err.message || err), "danger");
+        }
       }
     }
   });
@@ -812,6 +1466,36 @@ function initAudioOscilloscope() {
     const bufferLength = analyserNode.frequencyBinCount;
     const dataArray = new Uint8Array(bufferLength);
     analyserNode.getByteTimeDomainData(dataArray);
+
+    // Calculate real-time loudness for the live VU meter
+    let sum = 0;
+    let peakDev = 0;
+    for (let i = 0; i < bufferLength; i++) {
+      const dev = Math.abs(dataArray[i] - 128);
+      sum += dev;
+      if (dev > peakDev) peakDev = dev;
+    }
+    const currentPct = Math.min(100, Math.round((peakDev / 80) * 100));
+    if (currentPct > maxObservedMicLevel) {
+      maxObservedMicLevel = currentPct;
+    }
+
+    if (micLiveMeterFill) {
+      micLiveMeterFill.style.width = Math.min(100, Math.max(3, currentPct * 1.5)) + "%";
+      if (currentPct > 12) {
+        micLiveMeterFill.style.background = "linear-gradient(90deg, #00d4ff, #00ff88)";
+      } else {
+        micLiveMeterFill.style.background = "rgba(0, 212, 255, 0.4)";
+      }
+    }
+    if (micLiveMeterPct) {
+      micLiveMeterPct.textContent = currentPct + "%";
+      if (currentPct > 12) {
+        micLiveMeterPct.style.color = "#00ff88";
+      } else {
+        micLiveMeterPct.style.color = "var(--text-dim)";
+      }
+    }
 
     ctx.fillStyle = "#04070E";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -836,94 +1520,175 @@ function initAudioOscilloscope() {
     ctx.shadowBlur = 0;
   }
 
+  // Enumerate and populate microphone devices
+  async function populateMicDevices() {
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return;
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const audioInputs = devices.filter(d => d.kind === "audioinput");
+      const micSelect = document.getElementById("micDeviceSelect");
+      if (!micSelect || audioInputs.length === 0) return;
+
+      const currentVal = micSelect.value;
+      micSelect.innerHTML = "";
+
+      const defaultOpt = document.createElement("option");
+      defaultOpt.value = "";
+      defaultOpt.textContent = "Default Laptop Microphone";
+      micSelect.appendChild(defaultOpt);
+
+      audioInputs.forEach((dev, idx) => {
+        const opt = document.createElement("option");
+        opt.value = dev.deviceId;
+        opt.textContent = dev.label ? `🎙️ ${dev.label}` : `🎙️ Microphone Input ${idx + 1}`;
+        if (dev.deviceId === currentVal) opt.selected = true;
+        micSelect.appendChild(opt);
+      });
+    } catch (e) {
+      console.warn("Could not enumerate audio devices:", e);
+    }
+  }
+  populateMicDevices();
+
   browseBtn.addEventListener("click", () => fileInput.click());
   fileInput.addEventListener("change", () => {
     if (fileInput.files.length > 0) {
-      selectedName.textContent = fileInput.files[0].name;
+      resetRecordedAudio();
+      const file = fileInput.files[0];
+      if (file.size === 0) {
+        showToast("The selected audio file is empty (0 bytes). Please choose a valid recording.", "warning");
+        fileInput.value = "";
+        return;
+      }
+      const sizeKb = (file.size / 1024).toFixed(1);
+      selectedName.textContent = `📁 ${file.name} (${sizeKb} KB)`;
+      recordedAudioBlob = file;
+
+      if (recordedAudioUrl) URL.revokeObjectURL(recordedAudioUrl);
+      recordedAudioUrl = URL.createObjectURL(file);
+
+      if (recordedAudioPlayer) {
+        recordedAudioPlayer.muted = false;
+        recordedAudioPlayer.volume = 1.0;
+        recordedAudioPlayer.src = recordedAudioUrl;
+        recordedAudioPlayer.load();
+      }
+      if (recordedAudioContainer) {
+        recordedAudioContainer.style.display = "block";
+      }
+      micStatusText.innerHTML = `📁 <strong>Loaded "${escapeHtml(file.name)}"!</strong> Click <strong>Listen to What I Said</strong> to test sound, then click <strong>Analyze Voice Acoustics</strong>.`;
+      showToast(`Loaded "${file.name}" for analysis`, "info");
+      console.log(`[Audio File Upload] Selected: ${file.name}, MIME: ${file.type || 'audio/unknown'}, Size: ${file.size} bytes`);
     }
   });
 
   // Presets
   document.getElementById("presetAiVoice").addEventListener("click", () => {
+    resetRecordedAudio();
     selectedName.textContent = "elevenlabs_neural_voice_clone.wav";
   });
   document.getElementById("presetRealVoice").addEventListener("click", () => {
+    resetRecordedAudio();
     selectedName.textContent = "authentic_human_speech.wav";
   });
 
   scanBtn.addEventListener("click", async () => {
     setButtonLoading(scanBtn, true);
     try {
-      let result;
+      let result = null;
       const isPresetAi = selectedName.textContent.includes("neural") || selectedName.textContent.includes("clone");
       const isPresetReal = selectedName.textContent.includes("authentic") || selectedName.textContent.includes("human");
       const hasAudioFile = fileInput.files && fileInput.files.length > 0;
+      const hasRecordedVoice = !!recordedAudioBlob && !isPresetAi && !isPresetReal;
+
+      if (!hasAudioFile && !hasRecordedVoice && !isPresetAi && !isPresetReal) {
+        showToast("Please speak into the mic or select an audio file to scan", "warning");
+        setButtonLoading(scanBtn, false);
+        return;
+      }
 
       try {
         if (hasAudioFile) {
+          const file = fileInput.files[0];
+          console.log(`[Audio Scan] Uploading file: ${file.name}, MIME: ${file.type}, Size: ${file.size} bytes`);
           const formData = new FormData();
-          formData.append("audio", fileInput.files[0]);
+          formData.append("audio", file);
+          formData.append("filename", file.name);
           if (currentUser?.email) formData.append("user_email", currentUser.email);
           if (currentUser?.name) formData.append("user_name", currentUser.name);
+
           const res = await fetch(`${API_BASE}/api/scans/audio`, {
             method: "POST",
             headers: getAuthHeaders(),
             body: formData
           });
-          if (res.ok) result = await res.json();
+          if (res.ok) {
+            result = await res.json();
+            console.log("[Audio Scan] Upload response HTTP 200:", result);
+          } else {
+            const errBody = await res.json().catch(() => ({}));
+            throw new Error(errBody.message || `Server returned HTTP status ${res.status}`);
+          }
+        } else if (hasRecordedVoice) {
+          const mime = recordedAudioBlob.type || "audio/webm";
+          let ext = recordedAudioExt || ".webm";
+          if (mime.includes("wav")) ext = ".wav";
+          else if (mime.includes("mp4") || mime.includes("m4a")) ext = ".mp4";
+          else if (mime.includes("ogg")) ext = ".ogg";
+
+          const recFileName = `user_recorded_voice${ext}`;
+          console.log(`[Audio Scan] Uploading mic recording: ${recFileName}, MIME: ${mime}, Size: ${recordedAudioBlob.size} bytes`);
+          const uploadFile = new File([recordedAudioBlob], recFileName, { type: mime });
+
+          const formData = new FormData();
+          formData.append("audio", uploadFile);
+          formData.append("filename", recFileName);
+          if (currentUser?.email) formData.append("user_email", currentUser.email);
+          if (currentUser?.name) formData.append("user_name", currentUser.name);
+
+          const res = await fetch(`${API_BASE}/api/scans/audio`, {
+            method: "POST",
+            headers: getAuthHeaders(),
+            body: formData
+          });
+          if (res.ok) {
+            result = await res.json();
+            console.log("[Audio Scan] Mic upload response HTTP 200:", result);
+          } else {
+            const errBody = await res.json().catch(() => ({}));
+            throw new Error(errBody.message || `Server returned HTTP status ${res.status}`);
+          }
         } else {
+          // Test Preset
           const res = await fetch(`${API_BASE}/api/scans/audio`, {
             method: "POST",
             headers: getAuthHeaders({ "Content-Type": "application/json" }),
             body: JSON.stringify({
               preset: isPresetReal ? "authentic" : (isPresetAi ? "synthetic" : ""),
               filename: selectedName.textContent || (isPresetReal ? "authentic_human_speech.wav" : "elevenlabs_neural_voice_clone.wav"),
-              audio_base64: "UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=",
               user_email: currentUser?.email,
               user_name: currentUser?.name
             })
           });
-          if (res.ok) result = await res.json();
+          if (res.ok) {
+            result = await res.json();
+          } else {
+            const errBody = await res.json().catch(() => ({}));
+            throw new Error(errBody.message || `Preset scan failed (Status ${res.status})`);
+          }
         }
       } catch (backendErr) {
-        console.warn("Audio backend sync fallback", backendErr);
+        console.error("[Audio Scan] Network or server error:", backendErr);
+        showToast("Audio analysis request failed: " + (backendErr.message || backendErr), "danger");
       }
 
-      if (!result) {
-        result = {
-          classification: isPresetAi ? "Fake" : "Real",
-          verdict: isPresetAi ? "FAKE" : "REAL",
-          confidence: isPresetAi ? 95.4 : 96.8,
-          fake_probability: isPresetAi ? 95.4 : 3.2,
-          real_probability: isPresetAi ? 4.6 : 96.8,
-          score: isPresetAi ? 95 : 5,
-          risk_level: isPresetAi ? "High Risk" : "Safe",
-          explanation: isPresetAi
-            ? "Neural vocoder (HiFi-GAN) synthesis artifacts detected. Pitch contour lacks natural physiological micro-tremor."
-            : "Natural human vocal acoustics verified. Formant frequency transitions match authentic vocal tract resonance.",
-          explanations: isPresetAi ? [
-            "Spectral centroid flatness variance is 48% below human vocal baseline",
-            "Unnatural pitch periodicity typical of neural vocoder (HiFi-GAN)",
-            "Lack of organic micro-tremor and breathing pauses"
-          ] : [
-            "Organic pitch jitter and natural breathing pauses detected",
-            "Formant frequencies align with authentic human vocal tract",
-            "Standard ambient phase noise and room reverberation"
-          ],
-          mediaType: "AUDIO",
-          recommendations: isPresetAi ? [
-            "Conduct out-of-band verification before acting on urgent vocal requests",
-            "Require verbal authentication passphrase"
-          ] : [
-            "Natural human acoustics verified across vocal cord micro-fluctuations",
-            "Safe to proceed with standard communication"
-          ]
-        };
+      if (result) {
+        openForensicModal(result);
+        if (window.reloadScanHistory) window.reloadScanHistory();
       }
-      openForensicModal(result);
-      if (window.reloadScanHistory) window.reloadScanHistory();
     } catch (err) {
-      showToast("Error analyzing audio", "danger");
+      console.error("[Audio Scan] Execution error:", err);
+      showToast("Error analyzing audio: " + (err.message || err), "danger");
     } finally {
       setButtonLoading(scanBtn, false);
     }
@@ -964,13 +1729,19 @@ function initVideoScanner() {
   // Presets
   document.getElementById("presetDeepfakeVideo").addEventListener("click", () => {
     filenameLabel.textContent = "deepfake_faceswap_video.mp4";
+    videoElement.src = "/static/uploads/deepfake_faceswap_video.mp4";
+    videoElement.load();
     idleView.style.display = "none";
     previewView.style.display = "block";
+    if (scanBtn) scanBtn.removeAttribute("disabled");
   });
   document.getElementById("presetRealVideo").addEventListener("click", () => {
     filenameLabel.textContent = "authentic_interview_clip.mp4";
+    videoElement.src = "/static/uploads/authentic_interview_clip.mp4";
+    videoElement.load();
     idleView.style.display = "none";
     previewView.style.display = "block";
+    if (scanBtn) scanBtn.removeAttribute("disabled");
   });
 
   scanBtn.addEventListener("click", async () => {
@@ -1173,7 +1944,22 @@ function initUrlScanner() {
   const deceptionVal = document.getElementById("urlDeceptionVal");
 
   async function executeUrlScan(url) {
-    if (!url) return;
+    if (!url || !url.trim()) return;
+    url = url.trim();
+
+    // Validate it's a real URL — must have a dot and look like a domain/URL
+    const urlPattern = /^(https?:\/\/)?([a-zA-Z0-9\-]+\.)+[a-zA-Z]{2,}([\/?#].*)?$|^\d{1,3}(\.\d{1,3}){3}/;
+    if (!urlPattern.test(url)) {
+      showToast("Please enter a valid URL (e.g. https://example.com)", "danger");
+      if (protoVal) { protoVal.textContent = "Invalid Input"; protoVal.style.color = "var(--neon-crimson)"; }
+      if (tldVal) tldVal.textContent = "N/A";
+      if (deceptionVal) { deceptionVal.textContent = "Not a URL"; deceptionVal.style.color = "var(--neon-crimson)"; }
+      return;
+    }
+
+    // Auto-prepend http:// if no protocol given
+    if (!/^https?:\/\//i.test(url)) url = "http://" + url;
+
     try {
       const res = await fetch(`${API_BASE}/api/scans/url`, {
         method: "POST",
@@ -1185,10 +1971,19 @@ function initUrlScanner() {
         })
       });
       const data = await res.json();
-      
+
+      // Handle invalid URL response
+      if (data.verdict === "INVALID") {
+        showToast(data.explanation || "Invalid URL format.", "danger");
+        if (protoVal) { protoVal.textContent = "Invalid Input"; protoVal.style.color = "var(--neon-crimson)"; }
+        if (tldVal) tldVal.textContent = "N/A";
+        if (deceptionVal) { deceptionVal.textContent = "Not a URL"; deceptionVal.style.color = "var(--neon-crimson)"; }
+        return;
+      }
+
       protoVal.textContent = data.details?.has_https ? "HTTPS Encrypted" : "Insecure HTTP (No SSL)";
       protoVal.style.color = data.details?.has_https ? "var(--neon-emerald)" : "var(--neon-crimson)";
-      tldVal.textContent = url.split(".").pop().split("/")[0].toUpperCase();
+      tldVal.textContent = (data.details?.base_domain || url).split(".").pop().split("/")[0].toUpperCase();
       deceptionVal.textContent = `${data.details?.flags?.length || 0} Risk Flags`;
       deceptionVal.style.color = (data.details?.flags?.length || 0) > 0 ? "var(--neon-crimson)" : "var(--neon-emerald)";
 
@@ -1268,6 +2063,7 @@ function initProfileScanner() {
 // ═════════════════════════════════════════════════════════════════
 function initCyberMap() {
   const container = document.getElementById("mapNodesContainer");
+  if (!container) return;
   container.innerHTML = "";
 
   REGIONS.forEach(reg => {
@@ -1371,21 +2167,8 @@ function initThreatStream() {
   }
 
   function startFallbackIncidentStream() {
-    if (sseStatus) sseStatus.textContent = "SIMULATED TELEMETRY";
-    setInterval(() => {
-      const regions = ["North America", "Europe", "South Asia", "East Asia", "Latin America", "Middle East"];
-      const types = ["Voice Clone Impersonation", "GAN Deepfake Avatar", "SSO Phishing Campaign", "Social Media Botnet Spike"];
-      const sevs = ["Critical", "High", "Medium"];
-      addIncidentToFeed({
-        id: `inc_${Date.now()}`,
-        region: regions[Math.floor(Math.random() * regions.length)],
-        type: types[Math.floor(Math.random() * types.length)],
-        severity: sevs[Math.floor(Math.random() * sevs.length)],
-        score: Math.floor(Math.random() * 25 + 75),
-        target: "Targeted Verification Node",
-        timestamp: new Date().toLocaleTimeString()
-      });
-    }, 4000);
+    if (sseStatus) sseStatus.textContent = "LIVE FEED";
+    // No fallback simulated data — only real threats from server SSE stream
   }
 }
 
@@ -1466,6 +2249,8 @@ window.triageThreat = async function(id, status) {
   }
 };
 
+let currentManagingUser = null;
+
 async function loadAdminData() {
   if (!isOwnerUser(currentUser)) {
     const tbody = document.getElementById("adminUsersTbody");
@@ -1478,19 +2263,301 @@ async function loadAdminData() {
     });
     const data = await res.json();
     const tbody = document.getElementById("adminUsersTbody");
-    if (tbody) {
-      tbody.innerHTML = (data.users || []).map(u => `
-        <tr>
-          <td>${escapeHtml(u.name || 'User')}</td>
-          <td>${escapeHtml(u.email || '')}</td>
-          <td><span class="status-badge ${u.role === 'admin' ? 'resolved' : 'investigating'}">${(u.role || 'user').toUpperCase()}</span></td>
-          <td>${u.is_verified ? '✅ Verified' : '⏳ Pending'}</td>
-          <td><button class="btn-outline" style="padding:3px 8px; font-size:11px;">Manage</button></td>
-        </tr>
-      `).join("");
+    if (tbody && Array.isArray(data.users)) {
+      tbody.innerHTML = data.users.map(u => {
+        const isOwner = (u.email || "").toLowerCase() === OWNER_EMAIL;
+        const role = (u.role || "user").toLowerCase();
+        const roleBadgeClass = role === "admin" ? "resolved" : (role === "analyst" ? "pending" : "investigating");
+        const sessionBadge = u.is_logged_out
+          ? `<span class="status-badge" style="background:rgba(255,77,77,0.18); color:#ff5252; font-size:9px; margin-left:6px; letter-spacing:0.5px;">LOGGED OUT</span>`
+          : `<span class="status-badge" style="background:rgba(6,255,165,0.15); color:var(--neon-emerald); font-size:9px; margin-left:6px; letter-spacing:0.5px;">ACTIVE</span>`;
+
+        return `
+          <tr>
+            <td>
+              <strong>${escapeHtml(u.name || "User")}</strong>
+              ${isOwner ? '<span style="color:var(--neon-cyan); margin-left:6px; font-size:12px;" title="Primary Super Admin / Owner">👑</span>' : ""}
+            </td>
+            <td><code style="font-size:12px; color:var(--text-main); font-family:var(--font-mono);">${escapeHtml(u.email || "")}</code></td>
+            <td>
+              <span class="status-badge ${roleBadgeClass}">${role.toUpperCase()}</span>
+              ${sessionBadge}
+            </td>
+            <td>${u.is_verified ? '<span style="color:var(--neon-emerald); font-weight:600;">✅ Verified</span>' : '<span style="color:var(--neon-amber);">⏳ Pending</span>'}</td>
+            <td>
+              <button type="button" class="btn-outline manage-user-btn" 
+                data-email="${escapeHtml(u.email || "")}"
+                data-name="${escapeHtml(u.name || "")}"
+                data-role="${escapeHtml(role)}"
+                data-verified="${u.is_verified ? "true" : "false"}"
+                data-loggedout="${u.is_logged_out ? "true" : "false"}"
+                style="padding:4px 12px; font-size:11px; font-weight:700; cursor:pointer;">
+                ⚙️ Manage
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join("");
+
+      // Attach click listeners to all Manage buttons
+      tbody.querySelectorAll(".manage-user-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const userObj = {
+            email: btn.dataset.email,
+            name: btn.dataset.name,
+            role: btn.dataset.role,
+            is_verified: btn.dataset.verified === "true",
+            is_logged_out: btn.dataset.loggedout === "true"
+          };
+          openManageUserModal(userObj);
+        });
+      });
     }
   } catch (e) {
-    console.warn("Admin data load fallback");
+    console.warn("Admin data load fallback", e);
+  }
+}
+
+function openManageUserModal(userObj) {
+  if (!userObj) return;
+  currentManagingUser = userObj;
+
+  const isOwner = (userObj.email || "").toLowerCase() === OWNER_EMAIL;
+  const isTargetAdmin = (userObj.role || "").toLowerCase() === "admin";
+  const isLoggedOut = !!userObj.is_logged_out;
+
+  const nameEl = document.getElementById("manageUserName");
+  const emailEl = document.getElementById("manageUserEmail");
+  const avatarEl = document.getElementById("manageUserAvatar");
+  const roleBadge = document.getElementById("manageUserRoleBadge");
+  const sessionBadge = document.getElementById("manageUserSessionBadge");
+  const ownerNotice = document.getElementById("manageOwnerNotice");
+  const actionsContainer = document.getElementById("manageUserActions");
+  const btnMakeAdmin = document.getElementById("btnMakeAdmin");
+  const btnRemoveAdmin = document.getElementById("btnRemoveAdmin");
+  const btnForceLogout = document.getElementById("btnForceLogout");
+  const btnActivateUser = document.getElementById("btnActivateUser");
+  const statusMsg = document.getElementById("manageUserStatusMsg");
+
+  if (nameEl) nameEl.textContent = userObj.name || formatNameFromEmail(userObj.email);
+  if (emailEl) emailEl.textContent = userObj.email || "";
+  if (avatarEl) avatarEl.textContent = isOwner ? "👑" : (isTargetAdmin ? "⚙️" : "👤");
+
+  if (roleBadge) {
+    roleBadge.textContent = (userObj.role || "user").toUpperCase();
+    roleBadge.className = `status-badge ${isTargetAdmin ? "resolved" : ((userObj.role === "analyst") ? "pending" : "investigating")}`;
+  }
+
+  if (sessionBadge) {
+    if (isLoggedOut) {
+      sessionBadge.textContent = "LOGGED OUT / TERMINATED";
+      sessionBadge.style.background = "rgba(255, 77, 77, 0.2)";
+      sessionBadge.style.color = "#ff5252";
+    } else {
+      sessionBadge.textContent = "ACTIVE SESSION";
+      sessionBadge.style.background = "rgba(6, 255, 165, 0.15)";
+      sessionBadge.style.color = "var(--neon-emerald)";
+    }
+  }
+
+  if (statusMsg) {
+    statusMsg.style.display = "none";
+    statusMsg.textContent = "";
+  }
+
+  if (isOwner) {
+    if (ownerNotice) ownerNotice.style.display = "block";
+    if (actionsContainer) actionsContainer.style.display = "none";
+  } else {
+    if (ownerNotice) ownerNotice.style.display = "none";
+    if (actionsContainer) actionsContainer.style.display = "flex";
+
+    if (isTargetAdmin) {
+      if (btnMakeAdmin) btnMakeAdmin.style.display = "none";
+      if (btnRemoveAdmin) {
+        btnRemoveAdmin.style.display = "inline-flex";
+        btnRemoveAdmin.disabled = false;
+      }
+    } else {
+      if (btnMakeAdmin) {
+        btnMakeAdmin.style.display = "inline-flex";
+        btnMakeAdmin.disabled = false;
+      }
+      if (btnRemoveAdmin) btnRemoveAdmin.style.display = "none";
+    }
+
+    if (btnForceLogout) {
+      btnForceLogout.disabled = false;
+      btnForceLogout.style.display = "inline-flex";
+      btnForceLogout.innerHTML = isLoggedOut 
+        ? `<span>⚠️</span> Re-Force Logout`
+        : `<span>⚠️</span> Force Logout (All Logins)`;
+    }
+
+    if (btnActivateUser) {
+      btnActivateUser.disabled = false;
+      btnActivateUser.style.display = isLoggedOut ? "inline-flex" : "none";
+    }
+  }
+
+  openModal("manageUserModal");
+}
+
+async function handleMakeAdmin() {
+  if (!currentManagingUser || !currentManagingUser.email) return;
+  const email = currentManagingUser.email;
+  const btn = document.getElementById("btnMakeAdmin");
+  if (btn) btn.disabled = true;
+
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/users/role`, {
+      method: "POST",
+      headers: getAuthHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ email: email, role: "admin" })
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      showToast(`👑 ${email} has been promoted to Administrator!`, "success");
+      currentManagingUser.role = "admin";
+      openManageUserModal(currentManagingUser);
+      loadAdminData();
+    } else {
+      showToast(data.error || "Failed to promote user to Admin.", "danger");
+      if (btn) btn.disabled = false;
+    }
+  } catch (err) {
+    showToast("Network error updating user role.", "danger");
+    if (btn) btn.disabled = false;
+  }
+}
+
+async function handleRemoveAdmin() {
+  if (!currentManagingUser || !currentManagingUser.email) return;
+  const email = currentManagingUser.email;
+  const btn = document.getElementById("btnRemoveAdmin");
+  if (btn) btn.disabled = true;
+
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/users/role`, {
+      method: "POST",
+      headers: getAuthHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ email: email, role: "user" })
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      showToast(`🛡️ Admin role removed from ${email}. Role set to USER.`, "warning");
+      currentManagingUser.role = "user";
+      openManageUserModal(currentManagingUser);
+      loadAdminData();
+    } else {
+      showToast(data.error || "Failed to remove Admin role.", "danger");
+      if (btn) btn.disabled = false;
+    }
+  } catch (err) {
+    showToast("Network error updating user role.", "danger");
+    if (btn) btn.disabled = false;
+  }
+}
+
+async function handleForceLogout() {
+  if (!currentManagingUser || !currentManagingUser.email) return;
+  const email = currentManagingUser.email;
+  const btn = document.getElementById("btnForceLogout");
+  if (btn) btn.disabled = true;
+
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/users/logout`, {
+      method: "POST",
+      headers: getAuthHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ email: email })
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      showToast(`⚠️ Force logged out ${email}! All logins and sessions terminated.`, "success");
+      currentManagingUser.is_logged_out = true;
+      openManageUserModal(currentManagingUser);
+      loadAdminData();
+
+      // If active persona in browser was this account, safely revert to primary admin Aadarsh
+      if (currentUser && currentUser.email && currentUser.email.toLowerCase() === email.toLowerCase()) {
+        currentUser = {
+          email: OWNER_EMAIL,
+          name: "Aadarsh",
+          role: "admin"
+        };
+        localStorage.setItem("socialshield_user", JSON.stringify(currentUser));
+        localStorage.removeItem("socialshield_signed_out");
+        updateRoleUI();
+        showToast("Switched back to Primary Admin session (Aadarsh).", "info");
+      }
+    } else {
+      showToast(data.error || "Failed to force logout user.", "danger");
+      if (btn) btn.disabled = false;
+    }
+  } catch (err) {
+    showToast("Network error executing force logout.", "danger");
+    if (btn) btn.disabled = false;
+  }
+}
+
+async function handleActivateUser() {
+  if (!currentManagingUser || !currentManagingUser.email) return;
+  const email = currentManagingUser.email;
+  const btn = document.getElementById("btnActivateUser");
+  if (btn) btn.disabled = true;
+
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/users/activate`, {
+      method: "POST",
+      headers: getAuthHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ email: email })
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      showToast(`✅ Login access restored for ${email}! Account is active.`, "success");
+      currentManagingUser.is_logged_out = false;
+      openManageUserModal(currentManagingUser);
+      loadAdminData();
+    } else {
+      showToast(data.error || "Failed to restore user access.", "danger");
+      if (btn) btn.disabled = false;
+    }
+  } catch (err) {
+    showToast("Network error restoring user access.", "danger");
+    if (btn) btn.disabled = false;
+  }
+}
+
+function initAdminManageModal() {
+  const closeBtn = document.getElementById("closeManageUserModalBtn");
+  const modal = document.getElementById("manageUserModal");
+  if (closeBtn) {
+    closeBtn.addEventListener("click", () => closeModal("manageUserModal"));
+  }
+  if (modal) {
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) closeModal("manageUserModal");
+    });
+  }
+
+  const btnMakeAdmin = document.getElementById("btnMakeAdmin");
+  if (btnMakeAdmin) {
+    btnMakeAdmin.addEventListener("click", handleMakeAdmin);
+  }
+
+  const btnRemoveAdmin = document.getElementById("btnRemoveAdmin");
+  if (btnRemoveAdmin) {
+    btnRemoveAdmin.addEventListener("click", handleRemoveAdmin);
+  }
+
+  const btnForceLogout = document.getElementById("btnForceLogout");
+  if (btnForceLogout) {
+    btnForceLogout.addEventListener("click", handleForceLogout);
+  }
+
+  const btnActivateUser = document.getElementById("btnActivateUser");
+  if (btnActivateUser) {
+    btnActivateUser.addEventListener("click", handleActivateUser);
   }
 }
 
@@ -1592,71 +2659,155 @@ window.inspectHistoryItem = function(scanItem) {
 function openForensicModal(result) {
   activeScanResult = result;
   const modal = document.getElementById("forensicModal");
+  if (!modal) return;
   
-  const isFake = (result.verdict === "FAKE") || (result.classification === "Fake") || (result.score >= 50);
-  const isImage = (result.mediaType === "IMAGE" || result.type === "image");
-  const confidence = result.confidence || (isFake ? (result.fake_probability || result.score || 94) : (result.real_probability || 96));
-  const fakeProb = result.fake_probability !== undefined ? result.fake_probability : (isFake ? confidence : (100 - confidence));
-  const realProb = result.real_probability !== undefined ? result.real_probability : (100 - fakeProb);
+  const mType = (result.mediaType || result.type || 'IMAGE').toUpperCase();
+  const vUpper = (result.verdict || result.classification || "").toUpperCase();
+  const isUncertain = vUpper === "UNCERTAIN" || vUpper.includes("UNCERTAIN") || vUpper.includes("UNKNOWN");
 
-  document.getElementById("modalMediaType").textContent = `${(result.mediaType || result.type || 'MEDIA').toUpperCase()} FORENSIC REPORT`;
-  
-  if (isImage) {
-    document.getElementById("modalVerdictTitle").textContent = isFake ? "AI-Generated / Deepfake Image Detected" : "Organic / Authentic Photo Verified";
-    document.getElementById("modalVerdictPill").textContent = isFake ? "AI GENERATED / FAKE" : "ORGANIC / REAL";
-  } else {
-    document.getElementById("modalVerdictTitle").textContent = isFake ? "Synthetic Tampering & Fraud Detected" : "Authentic Media Verified";
-    document.getElementById("modalVerdictPill").textContent = isFake ? "FAKE" : "REAL";
-  }
-  
-  document.getElementById("modalConfidenceVal").textContent = `${Math.round(confidence)}%`;
-  document.getElementById("modalVerdictPill").className = `v-pill ${isFake ? 'crimson' : 'emerald'}`;
+  const catStr = (result.classification || result.category || "").toLowerCase();
+  const FAKE_VERDICTS2 = ["FAKE","AI","AI IMAGE","FAKE VIDEO","AI-GENERATED AUDIO","SCAM MESSAGE","PHISHING URL","SUSPICIOUS URL","BOT ACCOUNT","SUSPICIOUS PROFILE"];
+  const isFake = !isUncertain && (FAKE_VERDICTS2.includes(vUpper) || catStr.includes("fake") || catStr.includes("ai") || catStr.includes("scam") || catStr.includes("phishing") || catStr.includes("bot") || (!catStr.includes("original") && !catStr.includes("legitimate") && !catStr.includes("safe") && (result.score >= 50)));
+
+  const titleEl = document.getElementById("modalVerdictTitle");
+  const pillEl = document.getElementById("modalVerdictPill");
   const riskEl = document.getElementById("modalRiskLevel");
-  riskEl.textContent = result.risk_level || (isFake ? "High Risk" : "Safe");
-  riskEl.className = `risk-indicator ${isFake ? 'danger' : 'safe'}`;
-
-  document.getElementById("modalExplanation").textContent = result.explanation || "Detailed analysis completed.";
-
+  const expEl = document.getElementById("modalExplanation");
   const headingEl = document.getElementById("modalChecklistHeading");
-  if (headingEl) {
-    headingEl.textContent = isFake ? "Key Anomaly Markers" : "Authentic Optical Verification Markers";
+
+  document.getElementById("modalMediaType").textContent = `${mType} FORENSIC REPORT`;
+
+  if (mType === "AUDIO") {
+    const vStr = (result.verdict || result.classification || "").toUpperCase();
+    const isMobile = vStr.includes("MOBILE") || result.detected_category === "mobile_speaker_voice" || (result.explanation && result.explanation.toLowerCase().includes("mobile"));
+
+    if (isUncertain) {
+      if (titleEl) titleEl.textContent = "UNCERTAIN";
+      if (pillEl) {
+        pillEl.textContent = "UNCERTAIN";
+        pillEl.className = "v-pill amber";
+      }
+      if (riskEl) {
+        riskEl.textContent = "UNCERTAIN";
+        riskEl.className = "risk-indicator warning";
+      }
+      if (expEl) {
+        expEl.textContent = result.explanation || "Insufficient evidence for a reliable classification.";
+      }
+      if (headingEl) {
+        headingEl.textContent = "Acoustic Signal Diagnostics";
+      }
+    } else if (isMobile) {
+      if (titleEl) titleEl.textContent = "MOBILE VOICE Detected";
+      if (pillEl) {
+        pillEl.textContent = "MOBILE VOICE";
+        pillEl.className = "v-pill amber";
+      }
+      if (riskEl) {
+        riskEl.textContent = "MOBILE VOICE";
+        riskEl.className = "risk-indicator warning";
+      }
+      if (expEl) {
+        expEl.textContent = result.explanation || "Audio signal detected originating from a mobile phone speaker/device.";
+      }
+      if (headingEl) {
+        headingEl.textContent = "Mobile Loudspeaker Transducer Signatures";
+      }
+    } else if (isFake) {
+      if (titleEl) titleEl.textContent = "FAKE Detected";
+      if (pillEl) {
+        pillEl.textContent = "FAKE";
+        pillEl.className = "v-pill crimson";
+      }
+      if (riskEl) {
+        riskEl.textContent = "FAKE";
+        riskEl.className = "risk-indicator danger";
+      }
+      if (expEl) {
+        expEl.textContent = result.explanation || "Fake / AI-generated synthetic voice detected (Siri / Google / Neural TTS).";
+      }
+      if (headingEl) {
+        headingEl.textContent = "Neural Vocoder Acoustic Signatures";
+      }
+    } else {
+      if (titleEl) titleEl.textContent = "ORIGINAL Verified";
+      if (pillEl) {
+        pillEl.textContent = "ORIGINAL";
+        pillEl.className = "v-pill emerald";
+      }
+      if (riskEl) {
+        riskEl.textContent = "ORIGINAL";
+        riskEl.className = "risk-indicator safe";
+      }
+      if (expEl) {
+        expEl.textContent = result.explanation || "Original human vocal acoustics verified.";
+      }
+      if (headingEl) {
+        headingEl.textContent = "Biological Vocal Acoustic Markers";
+      }
+    }
+  } else {
+    // Non-audio modalities: Image, Video, Text, URL, Social Profile
+    const displayVerdict = result.verdict || (isFake ? "FAKE" : "ORIGINAL");
+    if (titleEl) titleEl.textContent = isFake ? `${displayVerdict} Detected` : `${displayVerdict} Verified`;
+    if (pillEl) {
+      pillEl.textContent = displayVerdict;
+      pillEl.className = `v-pill ${isFake ? 'crimson' : 'emerald'}`;
+    }
+    if (riskEl) {
+      riskEl.textContent = displayVerdict;
+      riskEl.className = `risk-indicator ${isFake ? 'danger' : 'safe'}`;
+    }
+    if (expEl) {
+      expEl.textContent = result.explanation || (isFake ? "Identified synthetic manipulation / fake signatures." : "Verified authentic optical camera capture.");
+    }
+    if (headingEl) {
+      headingEl.textContent = isFake ? "Key Forensic Anomaly Markers" : "Authentic Optical Verification Markers";
+    }
   }
 
-  // SVG Ring Offset (Circumference 283)
-  const offset = 283 - (confidence / 100) * 283;
-  const ringFill = document.getElementById("modalRingFill");
-  ringFill.style.strokeDashoffset = offset;
-  ringFill.style.stroke = isFake ? "var(--neon-crimson)" : "var(--neon-emerald)";
-
-  // Bars
-  document.getElementById("modalFakeProbBar").style.width = `${fakeProb}%`;
-  document.getElementById("modalFakeProbPct").textContent = `${fakeProb.toFixed(1)}%`;
-  document.getElementById("modalRealProbBar").style.width = `${realProb}%`;
-  document.getElementById("modalRealProbPct").textContent = `${realProb.toFixed(1)}%`;
+  // Hide probability distribution and confidence ring per request: "dont give pobility just give fake or a\original"
+  const probsCard = document.querySelector(".forensic-probs-card");
+  if (probsCard) probsCard.style.display = "none";
+  const ringWrap = document.querySelector(".verdict-ring-wrap");
+  if (ringWrap) ringWrap.style.display = "none";
 
   // Checklist
   const checklist = document.getElementById("modalChecklist");
-  const items = result.explanations || result.details?.flags || ["2D Fourier spectral density analysis", "Gradient texture variance check", "Neural artifact scan"];
-  checklist.innerHTML = items.map(i => `<li>${i}</li>`).join("");
+  if (checklist) {
+    const items = result.explanations || result.details?.flags || ["Signal feature consistency analysis"];
+    checklist.innerHTML = items.map(i => `<li>${i}</li>`).join("");
+  }
 
-  // Recs
+  // Recommendations
   const recsList = document.getElementById("modalRecsList");
-  const recs = result.recommendations || [
-    "Verify through an alternative authentic channel",
-    "Do not input passwords or financial data"
-  ];
-  recsList.innerHTML = recs.map(r => `<li>${r}</li>`).join("");
+  if (recsList) {
+    const recs = result.recommendations || [
+      "Verify through an alternative authentic channel",
+      "Do not input passwords or financial data"
+    ];
+    recsList.innerHTML = recs.map(r => `<li>${r}</li>`).join("");
+  }
 
   modal.style.display = "flex";
 }
 
 function initModals() {
+  // Close login success modal
+  const closeLoginSuccessBtn = document.getElementById("closeLoginSuccessModalBtn");
+  if (closeLoginSuccessBtn) {
+    closeLoginSuccessBtn.addEventListener("click", () => closeModal("loginSuccessModal"));
+  }
+
   // Close forensic modal
-  document.getElementById("closeForensicModalBtn").addEventListener("click", () => closeModal("forensicModal"));
-  document.getElementById("closeModalActionBtn").addEventListener("click", () => closeModal("forensicModal"));
+  const closeForensicBtn = document.getElementById("closeForensicModalBtn");
+  if (closeForensicBtn) closeForensicBtn.addEventListener("click", () => closeModal("forensicModal"));
+  const closeModalActionBtn = document.getElementById("closeModalActionBtn");
+  if (closeModalActionBtn) closeModalActionBtn.addEventListener("click", () => closeModal("forensicModal"));
 
   // Download Report
-  document.getElementById("downloadReportBtn").addEventListener("click", () => {
+  const downloadReportBtn = document.getElementById("downloadReportBtn");
+  if (downloadReportBtn) downloadReportBtn.addEventListener("click", () => {
     if (!activeScanResult) return;
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(activeScanResult, null, 2));
     const dlAnchor = document.createElement("a");
@@ -1689,12 +2840,23 @@ function initModals() {
     });
   }
 
-  document.getElementById("closeAuthModalBtn").addEventListener("click", () => closeModal("authModal"));
+  // Auth modal close button is removed — auth modal cannot be dismissed without signing in
+  // document.getElementById("closeAuthModalBtn")...
 
   const openMobileBtn = document.getElementById("openMobileModalBtn");
   const closeMobileBtn = document.getElementById("closeMobileModalBtn");
   if (openMobileBtn) {
-    openMobileBtn.addEventListener("click", () => openModal("mobileModal"));
+    openMobileBtn.addEventListener("click", () => {
+      // Always inject current server's real network IP into the modal
+      const serverHost = window.location.hostname;
+      const serverPort = window.location.port || "5000";
+      const webAppUrl = `http://${serverHost}:${serverPort}`;
+      const linkEl = document.getElementById("openWebAppLink");
+      const noteEl = document.getElementById("wifiNoteIP");
+      if (linkEl) linkEl.href = webAppUrl;
+      if (noteEl) noteEl.textContent = webAppUrl;
+      openModal("mobileModal");
+    });
   }
   if (closeMobileBtn) {
     closeMobileBtn.addEventListener("click", () => closeModal("mobileModal"));
@@ -1722,6 +2884,33 @@ function initModals() {
     if (forgotForm) forgotForm.style.display = "none";
     if (forgotStepRequest) forgotStepRequest.style.display = "block";
     if (forgotStepVerify) forgotStepVerify.style.display = "none";
+  }
+  window.showSignInView = showSignInView;
+
+  function showRegisterView() {
+    if (authTabs) authTabs.style.display = "flex";
+    if (tabRegister) tabRegister.classList.add("active");
+    if (tabLogin) tabLogin.classList.remove("active");
+    if (regForm) regForm.style.display = "flex";
+    if (loginForm) loginForm.style.display = "none";
+    if (forgotForm) forgotForm.style.display = "none";
+  }
+  window.showRegisterView = showRegisterView;
+
+  const linkToSignIn = document.getElementById("linkToSignIn");
+  if (linkToSignIn) {
+    linkToSignIn.addEventListener("click", (e) => {
+      e.preventDefault();
+      showSignInView();
+    });
+  }
+
+  const linkToRegister = document.getElementById("linkToRegister");
+  if (linkToRegister) {
+    linkToRegister.addEventListener("click", (e) => {
+      e.preventDefault();
+      showRegisterView();
+    });
   }
 
   function showForgotView() {
@@ -1882,9 +3071,11 @@ function initModals() {
   if (openReportThreatBtn) {
     openReportThreatBtn.addEventListener("click", () => openModal("reportThreatModal"));
   }
-  document.getElementById("closeReportThreatModalBtn").addEventListener("click", () => closeModal("reportThreatModal"));
+  const closeReportThreatBtn = document.getElementById("closeReportThreatModalBtn");
+  if (closeReportThreatBtn) closeReportThreatBtn.addEventListener("click", () => closeModal("reportThreatModal"));
 
-  document.getElementById("reportThreatForm").addEventListener("submit", async (e) => {
+  const reportThreatForm = document.getElementById("reportThreatForm");
+  if (reportThreatForm) reportThreatForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     const payload = {
       type: document.getElementById("threatTypeSelect").value,
@@ -1918,6 +3109,9 @@ function closeModal(id) {
   const m = document.getElementById(id);
   if (m) m.style.display = "none";
 }
+
+window.openModal = openModal;
+window.closeModal = closeModal;
 
 
 // ═════════════════════════════════════════════════════════════════
