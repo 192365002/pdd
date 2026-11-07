@@ -772,12 +772,12 @@ function initImageScanner() {
   const presetDeepfakeBtn = document.getElementById("presetDeepfakeImage");
   if (presetDeepfakeBtn) {
     presetDeepfakeBtn.addEventListener("click", () => {
-      previewImg.src = "/static/uploads/1791791650_e12a58d9-0390-4860-b890-639a3752750c.png";
-      filenameLabel.textContent = "1791791650_e12a58d9-0390-4860-b890-639a3752750c.png";
+      previewImg.src = "/static/uploads/ai_synthetic_portrait.png";
+      filenameLabel.textContent = "ai_synthetic_portrait.png";
       idleView.style.display = "none";
       previewView.style.display = "block";
       scanBtn.removeAttribute("disabled");
-      selectedImageFile = { name: "1791791650_e12a58d9-0390-4860-b890-639a3752750c.png", preset: "synthetic" };
+      selectedImageFile = { name: "ai_synthetic_portrait.png", preset: "synthetic" };
       capturedBase64 = null;
       const dvCard = document.getElementById("deepVerifyResultCard");
       if (dvCard) dvCard.style.display = "none";
@@ -909,7 +909,7 @@ function initImageScanner() {
           headers: getAuthHeaders({ "Content-Type": "application/json" }),
           body: JSON.stringify({
             preset: pType,
-            filename: fname || (pType === "organic" ? "organic_camera_portrait.jpg" : "1791791650_e12a58d9-0390-4860-b890-639a3752750c.png"),
+            filename: fname || (pType === "organic" ? "organic_camera_portrait.jpg" : "ai_synthetic_portrait.png"),
             source: `preset_${pType}`,
             user_email: currentUser?.email,
             user_name: currentUser?.name
