@@ -184,8 +184,8 @@ def classify_image_authenticity(file_path_or_bytes, source_hint=None):
         raise RuntimeError(f"Deep learning vision model failed during inference: {str(e)}")
 
     # 4. Strict Binary Verdict: Pure Content Analysis
-    # If either trained model detects synthetic / manipulated features
-    is_ai = (prob_ai_gen >= 0.50) or (prob_df >= 0.50)
+    # Calibrated ensemble: Flag as AI if either generator or deepfake detector finds strong generative indicators
+    is_ai = (prob_ai_gen >= 0.75) or (prob_df >= 0.55) or (((prob_ai_gen + prob_df) / 2.0) >= 0.62)
 
     t_elapsed = round((time.time() - t_start) * 1000, 1)
 
