@@ -816,9 +816,9 @@ function initImageScanner() {
 
     const category = (result.category || "").toLowerCase();
     const classification = (result.classification || "").toLowerCase();
-    const FAKE_VERDICTS = ["FAKE","AI","AI IMAGE","FAKE VIDEO","AI-GENERATED AUDIO","SCAM MESSAGE","PHISHING URL","SUSPICIOUS URL","BOT ACCOUNT","SUSPICIOUS PROFILE"];
-    const isFake = FAKE_VERDICTS.includes((result.verdict||"").toUpperCase()) || category.includes("ai") || category.includes("fake") || classification.includes("fake") || classification.includes("ai") || classification.includes("scam") || classification.includes("phishing") || classification.includes("bot");
-    const displayVerdict = result.verdict || (isFake ? "FAKE" : "ORIGINAL");
+    const FAKE_VERDICTS = ["FAKE","AI","AI IMAGE","AI GENERATED IMAGE","FAKE VIDEO","AI-GENERATED AUDIO","SCAM MESSAGE","PHISHING URL","SUSPICIOUS URL","BOT ACCOUNT","SUSPICIOUS PROFILE"];
+    const isFake = FAKE_VERDICTS.includes((result.verdict||"").toUpperCase()) || FAKE_VERDICTS.includes((result.classification||"").toUpperCase()) || category.includes("ai") || category.includes("fake") || classification.includes("fake") || classification.includes("ai") || classification.includes("scam") || classification.includes("phishing") || classification.includes("bot");
+    const displayVerdict = isFake ? "AI GENERATED IMAGE" : "ORIGINAL IMAGE";
 
     if (catBadge) {
       catBadge.className = `dv-category-badge ${isFake ? "badge-ai" : "badge-real"}`;
@@ -925,7 +925,7 @@ function initImageScanner() {
 
       if (result) {
         renderDeepVerifyCard(result);
-        showToast(`DeepVerify: ${result.classification} (${Math.round(result.model_score || result.score)}%)`, "success");
+        showToast(`DeepVerify: ${result.classification || result.verdict || "Analysis Complete"}`, "success");
       }
       
       if (window.reloadScanHistory) window.reloadScanHistory();

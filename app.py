@@ -733,18 +733,21 @@ def scan_image():
         result = ai_engine.analyze_image_deepfake(filepath, source=source)
         result['category'] = 'ai_generated' if result.get('verdict') == 'AI IMAGE' else 'likely_original'
 
-    # Binary Classification Mappings: Only TWO outcomes: AI IMAGE or ORIGINAL IMAGE
+    # Binary Classification Mappings: Only TWO outcomes: AI GENERATED IMAGE or ORIGINAL IMAGE
     category = result.get('category', 'ai_generated')
     if category in ['ai_generated', 'fake']:
-        verdict = 'AI IMAGE'
+        verdict = 'AI GENERATED IMAGE'
         risk_level = 'High Risk'
     else:
         verdict = 'ORIGINAL IMAGE'
         risk_level = 'Safe'
 
     result['verdict'] = verdict
+    result['classification'] = verdict
+    result['status_text'] = verdict
+    result['display_title'] = verdict
     result['risk_level'] = risk_level
-    result['score'] = 100
+    result['score'] = None
     result['confidence'] = None
     result['model_score'] = None
     result['fake_probability'] = None
@@ -1323,6 +1326,10 @@ def get_system_health():
 with app.app_context():
     init_db()
     seed_initial_data()
+    try:
+        image_authenticity_detector.load_detection_models()
+    except Exception as e:
+        logger.warning(f"Could not pre-warm image models: {e}")
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
