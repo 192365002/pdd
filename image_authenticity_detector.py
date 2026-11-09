@@ -39,6 +39,8 @@ _processor_gen = None
 _model_gen = None
 _processor_df = None
 _model_df = None
+_processor_umm = None
+_model_umm = None
 
 
 def load_detection_models():
@@ -46,13 +48,13 @@ def load_detection_models():
     Loads fine-tuned Vision Transformer (ViT) image classification models
     from local cache. Thread-safe singleton.
     """
-    global _models_loaded, _processor_gen, _model_gen, _processor_df, _model_df
+    global _models_loaded, _processor_gen, _model_gen, _processor_df, _model_df, _processor_umm, _model_umm
     if _models_loaded:
-        return _processor_gen, _model_gen, _processor_df, _model_df
+        return _processor_gen, _model_gen, _processor_df, _model_df, _processor_umm, _model_umm
 
     with _model_lock:
         if _models_loaded:
-            return _processor_gen, _model_gen, _processor_df, _model_df
+            return _processor_gen, _model_gen, _processor_df, _model_df, _processor_umm, _model_umm
 
         import torch
         from transformers import AutoImageProcessor, AutoModelForImageClassification
@@ -61,6 +63,7 @@ def load_detection_models():
 
         m_gen_id = "dima806/ai_vs_real_image_detection"
         m_df_id = "dima806/deepfake_vs_real_image_detection"
+        m_umm_id = "umm-maybe/AI-image-detector"
 
         # Model 1: AI vs Real General Generator Detector
         try:
@@ -78,10 +81,18 @@ def load_detection_models():
             logger.error(f"Failed to load deepfake detector model ({m_df_id}): {e}")
             raise RuntimeError(f"Deepfake detector initialization failed: {e}")
 
+        # Model 3: Pretrained AI vs Human Image ViT Classifier
+        try:
+            _processor_umm = AutoImageProcessor.from_pretrained(m_umm_id, local_files_only=True)
+            _model_umm = AutoModelForImageClassification.from_pretrained(m_umm_id, local_files_only=True).eval()
+        except Exception as e:
+            logger.warning(f"Secondary AI image detector ({m_umm_id}) could not be loaded: {e}")
+            _processor_umm, _model_umm = None, None
+
         _models_loaded = True
         logger.info("DeepVerify pretrained vision models successfully loaded into memory.")
 
-    return _processor_gen, _model_gen, _processor_df, _model_df
+    return _processor_gen, _model_gen, _processor_df, _model_df, _processor_umm, _model_umm
 
 
 def validate_image_file(file_path_or_bytes):
@@ -136,11 +147,41 @@ def validate_image_file(file_path_or_bytes):
         return False, f"Corrupted or unreadable image file: {str(e)}", None
 
 
-def classify_image_authenticity(file_path_or_bytes, source_hint=None):
+def get_model_label_indices(model):
     """
-    Performs genuine deep learning inference on the image content.
-    Returns strictly either 'AI GENERATED IMAGE' or 'ORIGINAL IMAGE'.
-    No percentages, confidence scores, or probabilities are displayed.
+    Dynamically identifies REAL and AI/FAKE label indices
+    using the model's actual configuration (model.config.id2label).
+    Avoids hardcoding index assumptions.
+    """
+    id2label = getattr(model.config, 'id2label', {})
+    real_indices = []
+    fake_indices = []
+    
+    for idx, label in id2label.items():
+        lbl_str = str(label).strip().lower()
+        if any(term in lbl_str for term in ['fake', 'ai', 'artificial', 'synthetic', 'deepfake', 'generated', 'manipulated']):
+            fake_indices.append(int(idx))
+        elif any(term in lbl_str for term in ['real', 'human', 'hum', 'authentic', 'original', 'organic']):
+            real_indices.append(int(idx))
+            
+    # Safe fallbacks if labels are generic (e.g. LABEL_0, LABEL_1)
+    if not fake_indices and not real_indices:
+        fake_indices = [1]
+        real_indices = [0]
+    elif not fake_indices:
+        fake_indices = [int(i) for i in id2label.keys() if int(i) not in real_indices]
+    elif not real_indices:
+        real_indices = [int(i) for i in id2label.keys() if int(i) not in fake_indices]
+        
+    return real_indices, fake_indices
+
+
+def classify_image_authenticity(file_path_or_bytes, **kwargs):
+    """
+    Performs genuine deep learning inference on the image content using pretrained Vision Transformers.
+    Dynamically resolves model labels from actual model configuration.
+    Strictly content-based analysis with no filename, source, or EXIF bias.
+    Returns structured result with classification: 'AI GENERATED IMAGE', 'ORIGINAL IMAGE', or 'UNCERTAIN'.
     """
     t_start = time.time()
 
@@ -157,57 +198,130 @@ def classify_image_authenticity(file_path_or_bytes, source_hint=None):
 
     # 2. Resize efficiently for fast CPU inference while maintaining high feature fidelity
     eval_img = pil_img.copy()
-    eval_img.thumbnail((512, 512), Image.Resampling.LANCZOS)
+    if eval_img.size[0] > 384 or eval_img.size[1] > 384:
+        eval_img.thumbnail((384, 384), Image.Resampling.BILINEAR)
 
-    # 3. Load genuine pretrained ViT models
-    p_gen, m_gen, p_df, m_df = load_detection_models()
+    # 3. Load genuine pretrained ViT models (singleton cache)
+    p_gen, m_gen, p_df, m_df, p_umm, m_umm = load_detection_models()
 
     import torch
+    # Cap CPU threads to 2 to prevent high thermal load, fan noise, and CPU spikes
+    if torch.get_num_threads() > 2:
+        try:
+            torch.set_num_threads(2)
+        except Exception:
+            pass
 
     try:
         with torch.no_grad():
-            # Model 1: General AI Generation Detector
+            # Model 1: General AI Generation Detector (dima806)
             inputs_gen = p_gen(eval_img, return_tensors="pt")
             logits_gen = m_gen(**inputs_gen).logits
             probs_gen = torch.softmax(logits_gen, dim=-1)[0]
-            # m_gen config: id2label {0: 'REAL', 1: 'FAKE'}
-            prob_ai_gen = probs_gen[1].item()
+            real_idx_gen, fake_idx_gen = get_model_label_indices(m_gen)
+            prob_ai_gen = sum(probs_gen[i].item() for i in fake_idx_gen)
 
-            # Model 2: Deepfake Face & Manipulation Detector
+            # Model 2: Deepfake Face & Manipulation Detector (dima806)
             inputs_df = p_df(eval_img, return_tensors="pt")
             logits_df = m_df(**inputs_df).logits
             probs_df = torch.softmax(logits_df, dim=-1)[0]
-            # m_df config: id2label {0: 'Real', 1: 'Fake'}
-            prob_df = probs_df[1].item()
+            real_idx_df, fake_idx_df = get_model_label_indices(m_df)
+            prob_df = sum(probs_df[i].item() for i in fake_idx_df)
+
+            # Model 3: Pretrained AI vs Human Image ViT Classifier (umm-maybe)
+            if p_umm is not None and m_umm is not None:
+                inputs_umm = p_umm(eval_img, return_tensors="pt")
+                logits_umm = m_umm(**inputs_umm).logits
+                probs_umm = torch.softmax(logits_umm, dim=-1)[0]
+                real_idx_umm, fake_idx_umm = get_model_label_indices(m_umm)
+                prob_ai_umm = sum(probs_umm[i].item() for i in fake_idx_umm)
+            else:
+                prob_ai_umm = 0.5
     except Exception as e:
         logger.error(f"Neural inference error: {e}")
         raise RuntimeError(f"Deep learning vision model failed during inference: {str(e)}")
 
-    # 4. Strict Binary Verdict: Pure Content Analysis
-    # Calibrated ensemble: Flag as AI if either generator or deepfake detector finds strong generative indicators
-    is_ai = (prob_ai_gen >= 0.75) or (prob_df >= 0.55) or (((prob_ai_gen + prob_df) / 2.0) >= 0.62)
+    # 4. Multi-Domain Forensics: Fourier Spectral Analysis & Noise Residual Variance
+    peak_z = 2.0
+    noise_std = 3.0
+    try:
+        import cv2
+        import numpy as np
+        gray_np = np.array(eval_img.convert('L'))
+        res_gray = cv2.resize(gray_np, (256, 256)).astype(np.float32)
+        hann = np.outer(np.hanning(256), np.hanning(256))
+        dft = cv2.dft((res_gray - np.mean(res_gray)) * hann, flags=cv2.DFT_COMPLEX_OUTPUT)
+        mag = cv2.magnitude(np.fft.fftshift(dft)[:, :, 0], np.fft.fftshift(dft)[:, :, 1])
+        mag_log = np.log(mag + 1e-5)
+        
+        y, x = np.ogrid[:256, :256]
+        r = np.sqrt((x - 128)**2 + (y - 128)**2).astype(int)
+        off_axis = (np.abs(x - 128) > 3) & (np.abs(y - 128) > 3)
+        radial_z = []
+        for radius in range(30, 115, 5):
+            ring = mag_log[(r == radius) & off_axis]
+            if len(ring) > 10 and np.std(ring) > 1e-4:
+                radial_z.append((np.max(ring) - np.mean(ring)) / np.std(ring))
+        if radial_z:
+            peak_z = float(np.mean(radial_z))
+        blur = cv2.GaussianBlur(res_gray, (3, 3), 0)
+        noise_std = float(np.std(cv2.absdiff(res_gray, blur)))
+    except Exception as fe:
+        logger.debug(f"Forensic FFT computation skipped: {fe}")
+
+    # 5. Robust Multi-Feature Decision Engine
+    # Checks genuine optical camera markers:
+    is_genuine = (prob_ai_umm < 0.20 and prob_df < 0.25 and prob_ai_gen < 0.93)
+    
+    # Checks synthetic AI generative markers:
+    is_ai = (
+        (prob_ai_gen >= 0.90 and prob_ai_umm >= 0.35) or
+        (prob_ai_gen >= 0.94 and prob_df >= 0.18) or
+        (prob_df >= 0.40) or
+        (prob_ai_umm >= 0.50 and prob_ai_gen >= 0.70) or
+        (peak_z > 3.8 and noise_std < 1.6)
+    )
 
     t_elapsed = round((time.time() - t_start) * 1000, 1)
 
-    if is_ai:
-        classification = "AI GENERATED IMAGE"
+    if is_ai and not is_genuine:
+        classification = "AI IMAGE"
         category = "ai_generated"
         risk_level = "High Risk"
         explanation = (
-            "The pretrained Vision Transformer detected synthetic diffusion patterns, "
+            "The pretrained Vision Transformer and spectral forensics detected synthetic diffusion patterns, "
             "algorithmic lattice features, or generative neural artifacts in the image content."
         )
-    else:
+    elif is_genuine and not is_ai:
         classification = "ORIGINAL IMAGE"
         category = "likely_original"
         risk_level = "Safe"
         explanation = (
-            "The pretrained Vision Transformer verified authentic optical camera characteristics, "
+            "The pretrained Vision Transformer and forensic analysis verified authentic optical camera characteristics, "
             "consistent with an original photograph."
+        )
+    elif is_ai and is_genuine:
+        if prob_ai_gen > 0.96 and prob_ai_umm > 0.30:
+            classification = "AI IMAGE"
+            category = "ai_generated"
+            risk_level = "High Risk"
+            explanation = "Generative diffusion lattice artifacts detected with high neural confidence."
+        else:
+            classification = "ORIGINAL IMAGE"
+            category = "likely_original"
+            risk_level = "Safe"
+            explanation = "Authentic optical sensor characteristics verified."
+    else:
+        classification = "UNABLE TO VERIFY"
+        category = "uncertain"
+        risk_level = "Medium Risk"
+        explanation = (
+            "The detection system could not reach a definitive authenticity verdict. "
+            "Evidence is insufficient to confirm or refute synthetic generation."
         )
 
     return {
-        "status": "success",
+        "status": "success" if classification != "UNABLE TO VERIFY" else "uncertain",
         "classification": classification,
         "verdict": classification,
         "category": category,
@@ -220,6 +334,8 @@ def classify_image_authenticity(file_path_or_bytes, source_hint=None):
         "processing_time_ms": t_elapsed,
         "forensic_metrics": {
             "resolution": f"{orig_w}x{orig_h}",
-            "evaluated_resolution": f"{eval_img.size[0]}x{eval_img.size[1]}"
+            "evaluated_resolution": f"{eval_img.size[0]}x{eval_img.size[1]}",
+            "fft_peak_z": round(peak_z, 2),
+            "noise_std": round(noise_std, 2)
         }
     }

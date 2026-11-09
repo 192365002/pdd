@@ -232,57 +232,64 @@ def analyze_text_fraud(text_content):
 
 def analyze_image_deepfake(image_path, source=''):
     """
-    Uses OpenCV and 2D Fourier Transform (DFT) spectral analysis with 2D Hann windowing
-    and off-axis filtering to accurately distinguish between Organic Live Camera Photos
-    and AI-Generated / Deepfake Images.
-    Evaluates:
-    1. Radial power spectrum decay with 2D Hann window to prevent rectangular edge leakage
-    2. Off-axis periodic peak detection (eliminates false-positive cardinal cross lines)
-    3. High-pass noise residual variance & camera shot noise
-    4. Facial micro-texture & Laplacian gradient distribution
-    5. Live webcam verification & EXIF sensor metadata
+    Analyzes image content to determine whether it is an AI-generated image
+    or an original genuine photograph. Uses DeepVerify Vision Transformer models
+    with reliable OpenCV 2D Fourier spectral analysis fallback.
+    Strictly outputs either 'AI IMAGE' or 'ORIGINAL IMAGE' with zero fake percentages.
     """
+    # 1. Primary Engine: Vision Transformer Pipeline
     try:
-        # Check metadata headers for AI or camera signatures
-        is_ai_meta = False
-        is_camera_meta = False
-        fname = os.path.basename(image_path).lower() if image_path else ""
+        import image_authenticity_detector
+        res = image_authenticity_detector.classify_image_authenticity(image_path)
+        v = res.get('verdict', 'ORIGINAL IMAGE').upper()
+        if 'AI' in v or 'FAKE' in v:
+            final_verdict = 'AI IMAGE'
+            risk_level = 'High Risk'
+            cat = 'ai_generated'
+        elif 'UNCERTAIN' in v:
+            final_verdict = 'UNCERTAIN'
+            risk_level = 'Medium Risk'
+            cat = 'uncertain'
+        else:
+            final_verdict = 'ORIGINAL IMAGE'
+            risk_level = 'Safe'
+            cat = 'likely_original'
 
-        is_live_camera = (source == 'webcam') or any(k in fname for k in [
-            'webcam', 'snapshot', 'capture', 'live_camera', 'camera', 'live_photo'
-        ])
+        return {
+            'classification': final_verdict,
+            'verdict': final_verdict,
+            'status_text': final_verdict,
+            'category': cat,
+            'risk_level': risk_level,
+            'score': None,
+            'confidence': None,
+            'fake_probability': None,
+            'real_probability': None,
+            'explanation': res.get('explanation', ''),
+            'explanations': [res.get('explanation', '')],
+            'details': res.get('forensic_metrics', {}),
+            'model_name': res.get('model_name', 'DeepVerify Vision Transformer Pipeline'),
+            'model_version': res.get('model_version', '3.2.0'),
+            'processing_time_ms': res.get('processing_time_ms', 0)
+        }
+    except Exception as exc:
+        logger.warning(f"Neural detector pass failed ({exc}), evaluating image forensics...")
 
-        if image_path and os.path.exists(image_path):
-            try:
-                with open(image_path, 'rb') as f:
-                    header = f.read(16384).lower()
-                    if any(k in header for k in [b'stablediffusion', b'midjourney', b'dall-e', b'comfyui', b'novelai', b'civitai', b'parameters\x00', b'prompt\x00', b'adobe firefly']):
-                        is_ai_meta = True
-                    if any(k in header for k in [b'nikon', b'canon', b'apple', b'sony', b'samsung', b'fujifilm', b'olympus', b'panasonic', b'google pixel', b'exif\x00\x00']):
-                        is_camera_meta = True
-            except Exception:
-                pass
-
-        if (source in ('synthetic', 'ai', 'ai_generated', 'preset_synthetic')) or any(k in fname for k in ['synthetic', 'deepfake', 'ai_generated', 'diffusion', 'midjourney', 'stablediffusion', 'stylegan', 'progan']):
-            is_ai_meta = True
-        elif (source in ('webcam', 'organic', 'preset_organic')) or any(k in fname for k in ['organic', 'portrait', 'natural', 'raw_photo', 'camera']):
-            is_camera_meta = True
-
+    # 2. Fallback Engine: Pure Image Forensics (No filename or metadata bias)
+    try:
         img = cv2.imread(image_path)
         if img is None:
-            return {'error': 'Invalid or unreadable image format.', 'score': 50, 'risk_level': 'Unknown', 'verdict': 'UNCERTAIN'}
+            return {'error': 'Invalid or unreadable image format.', 'score': None, 'confidence': None, 'risk_level': 'Medium Risk', 'verdict': 'UNCERTAIN', 'classification': 'UNCERTAIN'}
 
         orig_h, orig_w = img.shape[:2]
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
-        # Resize to standard analysis resolution (256x256)
         resized = cv2.resize(gray, (256, 256)).astype(np.float32)
 
-        # 1. 2D Hann Windowing to eliminate rectangular image boundary cross-leakage
+        # 2D Hann Windowing to eliminate rectangular boundary leakage
         hann_2d = np.outer(np.hanning(256), np.hanning(256))
         windowed = (resized - np.mean(resized)) * hann_2d
 
-        # Perform 2D Discrete Fourier Transform (DFT)
+        # 2D Discrete Fourier Transform
         dft = cv2.dft(windowed, flags=cv2.DFT_COMPLEX_OUTPUT)
         dft_shift = np.fft.fftshift(dft)
         magnitude = cv2.magnitude(dft_shift[:, :, 0], dft_shift[:, :, 1])
@@ -291,11 +298,8 @@ def analyze_image_deepfake(image_path, source=''):
         center = 128
         y, x = np.ogrid[:256, :256]
         r = np.sqrt((x - center)**2 + (y - center)**2).astype(int)
-
-        # Exclude cardinal axes (+-3 pixels around center lines) to avoid optical cross artifacts
         off_axis = (np.abs(x - center) > 3) & (np.abs(y - center) > 3)
 
-        # Measure true off-axis high-frequency peak anomaly (Z-score relative to radial mean)
         radial_z_scores = []
         for radius in range(30, 115, 5):
             ring_mask = (r == radius) & off_axis
@@ -308,164 +312,46 @@ def analyze_image_deepfake(image_path, source=''):
                     radial_z_scores.append((max_val - mean_val) / std)
 
         peak_z_score = float(np.mean(radial_z_scores)) if radial_z_scores else 2.1
-
-        # Outer vs inner frequency energy ratio
-        outer_mask = (r > 45) & off_axis
-        inner_mask = (r <= 45) & (r > 5) & off_axis
-        outer_energy = float(np.mean(mag_log[outer_mask]))
-        inner_energy = float(np.mean(mag_log[inner_mask]))
-        spectral_ratio = float(outer_energy / (inner_energy + 1e-5))
-
-        # 2. High-pass noise residual variance (natural sensor shot noise check)
         blur = cv2.GaussianBlur(resized, (3, 3), 0)
-        residual = cv2.absdiff(resized, blur)
-        noise_std = float(np.std(residual))
+        noise_std = float(np.std(cv2.absdiff(resized, blur)))
 
-        # 3. Laplacian gradient & texture variance
-        try:
-            lap = cv2.Laplacian(resized, cv2.CV_32F)
-            lap_var = float(lap.var())
-        except Exception:
-            lap_var = 85.0
-
-        # 4. Multi-Factor Classification Score
-        if is_ai_meta:
-            fake_prob = 96.5
-        elif is_live_camera or is_camera_meta or (source in ('webcam', 'organic', 'preset_organic')):
-            fake_prob = 3.5
-        else:
-            fake_score = 6.0  # Baseline organic
-
-            if peak_z_score > 3.65 and noise_std < 1.6:
-                fake_score = 92.0
-            elif peak_z_score > 3.65:
-                fake_score = 68.0
-            elif peak_z_score > 3.2 and noise_std < 1.5:
-                fake_score = 72.0
-            elif is_camera_meta:
-                fake_score = 4.0
-
-            fake_prob = min(max(fake_score, 3.5), 98.0)
-
-        real_prob = round(100.0 - fake_prob, 1)
-        fake_prob = round(fake_prob, 1)
-
-        # ── Additional image quality metrics ──
-        # 5. JPEG block artifact detection (8x8 DCT blocks) — AI images often lack JPEG artifacts
-        try:
-            # Compute variance between 8x8 block boundaries vs interior
-            h8 = (img.shape[0] // 8) * 8
-            w8 = (img.shape[1] // 8) * 8
-            img8 = cv2.resize(gray, (min(w8, 256), min(h8, 256)))
-            block_boundary_var = float(np.std(img8[7::8, :]) + np.std(img8[:, 7::8]))
-            interior_var = float(np.std(img8[4::8, :]) + np.std(img8[:, 4::8]))
-            jpeg_artifact_ratio = block_boundary_var / (interior_var + 1e-5)
-        except Exception:
-            jpeg_artifact_ratio = 1.0
-
-        # 6. Local Binary Pattern texture uniformity (AI images are too smooth)
-        try:
-            gray_small = cv2.resize(gray, (128, 128))
-            # Simplified LBP via local variance
-            kernel = np.ones((3, 3), np.float32) / 9.0
-            local_mean = cv2.filter2D(gray_small.astype(np.float32), -1, kernel)
-            local_var = cv2.filter2D((gray_small.astype(np.float32) - local_mean) ** 2, -1, kernel)
-            texture_uniformity = float(np.std(local_var))
-        except Exception:
-            texture_uniformity = 10.0
-
-        # ── Multi-Factor Classification Score ──
-        if is_ai_meta:
-            fake_prob = 96.5
-        elif is_live_camera or is_camera_meta or (source in ('webcam', 'organic', 'preset_organic')):
-            fake_prob = 3.5
-        else:
-            fake_score = 6.0  # Baseline organic
-
-            # Fourier spectral peaks (main signal)
-            if peak_z_score > 3.65 and noise_std < 1.6:
-                fake_score = 92.0
-            elif peak_z_score > 3.65:
-                fake_score = 68.0
-            elif peak_z_score > 3.2 and noise_std < 1.5:
-                fake_score = 72.0
-            elif is_camera_meta:
-                fake_score = 4.0
-
-            # Texture smoothness boost (AI images = very smooth, low texture_uniformity)
-            if texture_uniformity < 3.0:
-                fake_score = max(fake_score, 60.0)
-            elif texture_uniformity < 6.0:
-                fake_score += 10.0
-
-            # JPEG artifact analysis (real photos have artifacts; AI images often don't)
-            if jpeg_artifact_ratio < 0.8:  # Too smooth — no JPEG blocking — likely AI
-                fake_score += 8.0
-
-            fake_prob = min(max(fake_score, 3.5), 98.0)
-
-        real_prob = round(100.0 - fake_prob, 1)
-        fake_prob = round(fake_prob, 1)
-
-        is_fake = fake_prob >= 50.0
-        confidence = round(fake_prob if is_fake else real_prob, 1)
-
-        if is_fake:
-            verdict = 'AI IMAGE'
-            risk_level = 'High Risk'
-            explanation = ("AI-generated or manipulated image detected. Fourier DFT spectral analysis revealed "
-                           "periodic synthetic artifacts inconsistent with optical camera captures.")
-            explanations = [
-                f"2D Fourier spectrum shows off-axis periodic anomaly (Z-Score: {peak_z_score:.2f})",
-                f"Texture uniformity ({texture_uniformity:.2f}) suggests AI smoothing artifacts",
-                "Generative deconvolution grid artifacts present in high frequencies",
-                "Inconsistent lighting vector and chromatic contour symmetry"
-            ]
-        else:
-            verdict = 'ORIGINAL IMAGE'
-            risk_level = 'Safe'
-            explanation = ("Original optical camera photo verified. Frequency spectrum follows natural 1/f² power "
-                           "law decay with authentic camera sensor noise and genuine texture variance.")
-            explanations = [
-                f"Organic optical frequency decay verified (Radial Peak Z: {peak_z_score:.2f})",
-                f"Natural camera sensor noise pattern (Std: {noise_std:.2f})",
-                f"Genuine texture variance ({texture_uniformity:.2f}) consistent with optical sensor",
-                "No generative deconvolution grid anomalies or synthetic Fourier spikes"
-            ]
-
-        score = int(fake_prob) if is_fake else int(real_prob)
+        is_fake = (peak_z_score > 3.65 and noise_std < 1.6) or (peak_z_score > 4.2)
+        final_verdict = 'AI IMAGE' if is_fake else 'ORIGINAL IMAGE'
+        risk_level = 'High Risk' if is_fake else 'Safe'
 
         return {
-            'classification': 'AI IMAGE' if is_fake else 'ORIGINAL IMAGE',
-            'verdict': verdict,
-            'confidence': confidence,
-            'fake_probability': fake_prob,
-            'real_probability': real_prob,
-            'score': score,
+            'classification': final_verdict,
+            'verdict': final_verdict,
+            'status_text': final_verdict,
+            'confidence': None,
+            'fake_probability': None,
+            'real_probability': None,
+            'score': None,
             'risk_level': risk_level,
-            'explanation': explanation,
-            'explanations': explanations,
+            'explanation': (
+                "Synthetic frequency artifacts detected via Fourier spectral analysis."
+                if is_fake else
+                "Authentic optical camera characteristics verified through natural frequency decay."
+            ),
+            'explanations': [
+                f"Fourier peak Z-Score: {peak_z_score:.2f}",
+                f"Camera noise residual std: {noise_std:.2f}"
+            ],
             'details': {
-                'spectral_ratio': round(spectral_ratio, 4),
                 'peak_z_score': round(peak_z_score, 2),
                 'noise_std': round(noise_std, 2),
-                'laplacian_variance': round(lap_var, 2),
-                'texture_uniformity': round(texture_uniformity, 2),
-                'jpeg_artifact_ratio': round(jpeg_artifact_ratio, 3),
-                'resolution': f"{orig_w}x{orig_h}",
-                'high_freq_energy': round(outer_energy, 2),
-                'low_freq_energy': round(inner_energy, 2),
-                'source': 'Live Camera / Optical Capture' if is_live_camera else 'File Upload'
+                'resolution': f"{orig_w}x{orig_h}"
             }
         }
-
     except Exception as e:
         logger.error(f"Error in CV2 Fourier analysis: {e}")
         return {
             'error': f"Image analysis failed: {str(e)}",
-            'score': 50,
-            'risk_level': 'Unknown',
+            'score': None,
+            'confidence': None,
+            'risk_level': 'Medium Risk',
             'verdict': 'UNCERTAIN',
+            'classification': 'UNCERTAIN',
             'explanation': 'Could not complete image analysis due to a processing error.',
             'details': {}
         }
@@ -785,188 +671,17 @@ def _get_base_domain(hostname):
 
 
 def analyze_url_phishing(url_string):
-    if not url_string or len(url_string.strip()) == 0:
-        return {
-            'status': 'Invalid',
-            'verdict': 'INVALID',
-            'score': 0,
-            'risk_level': 'Unknown',
-            'explanation': 'No URL provided.',
-            'details': {}
-        }
-
-    url_original = url_string.strip()
-    url_lower = url_original.lower()
-
-    # ── Validate: must look like a real URL or domain ──
-    # Must have at least one dot AND a valid TLD (2+ chars) OR be an IP address
-    valid_url_pattern = re.compile(
-        r'^(https?://)?([a-zA-Z0-9\-]+\.)+[a-zA-Z]{2,}(/.*)?$'
-        r'|^\d{1,3}(\.\d{1,3}){3}'
-    )
-    if not valid_url_pattern.match(url_original):
-        return {
-            'status': 'Invalid',
-            'verdict': 'INVALID',
-            'score': 0,
-            'risk_level': 'Unknown',
-            'explanation': f'"{url_original}" is not a valid URL. Please enter a proper URL like https://example.com',
-            'explanations': ['Input does not match a valid URL format', 'Enter a URL starting with http:// or https://', 'Example: https://paypal.com or http://suspicious-login.tk'],
-            'details': {'flags': [], 'has_https': False, 'domain': '', 'base_domain': '', 'is_trusted': False, 'subdomain_count': 0}
-        }
-
-    # Auto-add protocol if missing (e.g. user typed "google.com")
-    if not re.match(r'^https?://', url_lower):
-        url_original = 'http://' + url_original
-        url_lower = url_original.lower()
-
-    flags = []
-    score = 0
-
-    hostname = _extract_domain(url_lower)
-    base_domain = _get_base_domain(hostname)
-
-    # ── 1. Trusted domain whitelist — if base domain is trusted, start very low ──
-    if base_domain in TRUSTED_DOMAINS or hostname in TRUSTED_DOMAINS:
-        # Still check the path for phishing keywords even on "trusted" domains
-        path_part = url_lower[url_lower.find(hostname) + len(hostname):]
-        path_phishing = [kw for kw in PHISHING_KEYWORDS_IN_URL if kw in path_part]
-        if path_phishing:
-            score += 50
-            flags.append(f"Phishing path on spoofed/redirected trusted domain: {path_phishing[0]}")
-        else:
-            # Genuinely trusted domain, clean path
-            return {
-                'status': 'Safe',
-                'verdict': 'ORIGINAL',
-                'score': 5,
-                'risk_level': 'Safe',
-                'confidence': 95.0,
-                'explanation': f"Verified trusted domain: {base_domain}. No phishing indicators detected in URL structure or path.",
-                'explanations': [f"Domain '{base_domain}' is a known legitimate service", "HTTPS-capable trusted domain", "No suspicious path or query string patterns"],
-                'details': {
-                    'flags': [],
-                    'has_https': url_lower.startswith('https://'),
-                    'domain': hostname,
-                    'base_domain': base_domain,
-                    'is_trusted': True,
-                    'subdomain_count': max(0, hostname.count('.') - 1)
-                }
-            }
-
-    # ── 2. URL Shortener detection ──
-    if base_domain in URL_SHORTENERS or hostname in URL_SHORTENERS:
-        score += 25
-        flags.append(f"URL shortener used ({base_domain}) — real destination is hidden")
-
-    # ── 3. Suspicious TLD check ──
-    tld_hit = False
-    for tld in PHISHING_TLDS:
-        if hostname.endswith(tld) or base_domain.endswith(tld):
-            score += 40
-            flags.append(f"High-risk phishing Top-Level Domain detected: {tld}")
-            tld_hit = True
-            break
-
-    # ── 4. Phishing keywords in full URL ──
-    for kw in PHISHING_KEYWORDS_IN_URL:
-        if kw in url_lower:
-            score += 35
-            flags.append(f"Phishing keyword pattern in URL: '{kw}'")
-            break  # one strong hit is enough
-
-    # ── 5. Brand impersonation — trusted brand name in suspicious domain ──
-    trusted_brands = ['paypal', 'google', 'apple', 'amazon', 'facebook', 'netflix',
-                      'microsoft', 'instagram', 'twitter', 'bank', 'irs', 'fedex', 'ups']
-    for brand in trusted_brands:
-        if brand in hostname and base_domain not in TRUSTED_DOMAINS:
-            score += 30
-            flags.append(f"Brand impersonation: '{brand}' used in unverified domain")
-            break
-
-    # ── 6. IP address as host (no domain name) ──
-    if re.match(r'^\d{1,3}(\.\d{1,3}){3}$', hostname):
-        score += 40
-        flags.append("Raw IP address used instead of domain — classic phishing tactic")
-
-    # ── 7. Credential masking '@' in URL ──
-    if '@' in url_lower:
-        score += 35
-        flags.append("URL contains '@' — browser treats text before @ as credentials (attacker trick)")
-
-    # ── 8. Excessive subdomain nesting (DNS masking) ──
-    subdomain_count = hostname.count('.') - 1
-    if subdomain_count >= 3:
-        score += 20
-        flags.append(f"Excessive subdomain depth ({subdomain_count} levels) — DNS masking technique")
-    elif subdomain_count == 2:
-        score += 8
-        flags.append("Multiple subdomains — verify domain authenticity")
-
-    # ── 9. Abnormally long domain / hyphen abuse ──
-    if len(hostname) > 35:
-        score += 15
-        flags.append(f"Unusually long hostname ({len(hostname)} chars) — obfuscation pattern")
-    hyphen_count = hostname.count('-')
-    if hyphen_count >= 3:
-        score += 15
-        flags.append(f"Excessive hyphens in domain ({hyphen_count}) — impersonation pattern")
-    elif hyphen_count >= 2:
-        score += 8
-
-    # ── 10. Encoded characters / obfuscation ──
-    if '%' in url_lower or '0x' in url_lower:
-        score += 20
-        flags.append("URL contains encoded/hex characters — obfuscation detected")
-
-    # ── 11. Multiple redirects indicator (double http in URL) ──
-    if url_lower.count('http') > 1:
-        score += 25
-        flags.append("URL contains embedded redirect — possible open redirect attack")
-
-    # ── 12. HTTP (not HTTPS) — only mild penalty, not decisive alone ──
-    has_https = url_lower.startswith('https://')
-    if not has_https and not url_lower.startswith('http://localhost') and not url_lower.startswith('http://127.'):
-        # Only add penalty if other flags already exist (don't flag plain http alone harshly)
-        if score > 15 or flags:
-            score += 10
-            flags.append("Lacks HTTPS encryption (HTTP only)")
-
-    score = min(score, 100)
-
-    if score <= 25:
-        status = 'Safe'
-        verdict = 'SAFE URL'
-        risk_level = 'Safe'
-        explanation = "URL appears clean. No domain masking, phishing patterns, suspicious TLDs, brand impersonation, or deceptive structures detected."
-    elif score <= 55:
-        status = 'Suspicious'
-        verdict = 'SUSPICIOUS URL'
-        risk_level = 'Suspicious'
-        explanation = f"Potential phishing risk. Flags: {'; '.join(flags)}. Do not enter credentials on this site."
-    else:
-        status = 'Dangerous'
-        verdict = 'PHISHING URL'
-        risk_level = 'High Risk'
-        explanation = f"Critical phishing alert. Strong domain spoofing and credential-harvesting indicators. Flags: {'; '.join(flags)}. Do NOT visit this URL."
-
-    return {
-        'status': status,
-        'verdict': verdict,
-        'score': score,
-        'risk_level': risk_level,
-        'confidence': round(max(score, 100 - score), 1),
-        'explanation': explanation,
-        'explanations': flags if flags else ["Domain structure aligns with standard web standards", "No phishing patterns detected", "Valid domain and clean URL path"],
-        'details': {
-            'flags': flags,
-            'has_https': has_https,
-            'domain': hostname,
-            'base_domain': base_domain,
-            'is_trusted': False,
-            'subdomain_count': max(0, subdomain_count)
-        }
-    }
+    """
+    Advanced Fake URL & Phishing Detection using 6-technique weighted forensics:
+    - URL structure analysis
+    - Domain reputation analysis
+    - Suspicious TLD analysis
+    - Typosquatting & brand impersonation
+    - Phishing keyword analysis
+    - Domain and host analysis
+    """
+    import url_authenticity_detector
+    return url_authenticity_detector.evaluate_url_authenticity(url_string)
 
 
 # ====================================================

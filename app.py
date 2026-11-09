@@ -18,6 +18,8 @@ from models import get_db, init_db
 import auth
 import ai_engine
 import image_authenticity_detector
+import video_authenticity_detector
+import url_authenticity_detector
 
 def _utcnow():
     return datetime.datetime.now(datetime.timezone.utc)
@@ -611,35 +613,54 @@ def scan_url():
     url = data.get('url', '')
     
     if not url:
-        return jsonify({'message': 'URL payload is required.'}), 400
+        return jsonify({
+            'status': 'error',
+            'classification': 'RISK',
+            'verdict': 'RISK',
+            'risk_percentage': None,
+            'score': None,
+            'confidence': None,
+            'message': 'URL payload is required.'
+        }), 400
         
     user = get_current_user()
-    result = ai_engine.analyze_url_phishing(url)
+    result = url_authenticity_detector.evaluate_url_authenticity(url)
+    
+    # Zero percentages: strictly SAFE or RISK only
+    verdict = result.get('verdict', 'SAFE')
+    result['verdict'] = verdict
+    result['classification'] = verdict
+    result['score'] = None
+    result['confidence'] = None
+    result['risk_percentage'] = None
     
     db = get_db()
     scan_doc = {
-        'user_id': user.get('user_id', user['sub']),
+        'user_id': user.get('user_id', user.get('sub', 'guest')),
         'user_email': user.get('email', '').lower(),
         'user_name': user.get('name', ''),
         'type': 'url',
         'input': url,
-        'score': result['score'],
+        'classification': verdict,
+        'score': None,
+        'risk_percentage': None,
         'risk_level': result['risk_level'],
-        'verdict': result['verdict'],
-        'confidence': result['confidence'],
+        'verdict': verdict,
+        'confidence': None,
+        'reputation_status': result.get('reputation_status', 'Unknown'),
         'explanation': result['explanation'],
-        'details': result['details'],
+        'details': result.get('details', {}),
         'created_at': _utcnow()
     }
     inserted = db['scans'].insert_one(scan_doc)
-    result['scanId'] = str(inserted.inserted_id) if hasattr(inserted, 'inserted_id') else f"scan_{int(time.time())}"
+    scan_id_val = str(inserted.inserted_id) if hasattr(inserted, 'inserted_id') else f"scan_{int(time.time())}"
+    result['scanId'] = scan_id_val
+    result['scan_id'] = scan_id_val
     
-    _, _, recs = ai_engine.generate_overall_fraud_score([result])
-    result['recommendations'] = recs
     result['mediaType'] = 'URL'
     result['user_email'] = user.get('email', '').lower()
     result['user_name'] = user.get('name', '')
-    result['user_id'] = user.get('user_id', user['sub'])
+    result['user_id'] = user.get('user_id', user.get('sub', 'guest'))
     
     return jsonify(result), 200
 
@@ -719,28 +740,46 @@ def scan_image():
     if not is_valid:
         return jsonify({
             'status': 'error',
-            'error': val_err,
-            'classification': 'Uncertain',
+            'error': val_err or 'Invalid image file.',
+            'classification': 'UNABLE TO VERIFY',
+            'verdict': 'UNABLE TO VERIFY',
             'category': 'uncertain',
-            'model_score': 50.0
+            'risk_level': 'Medium Risk',
+            'score': None,
+            'confidence': None
         }), 400
 
-    # Execute DeepVerify Pretrained Neural Detection Pipeline (with OpenCV Fourier fallback)
+    # Execute DeepVerify Pretrained Neural Detection Pipeline (Strictly Content-Based)
     try:
-        result = image_authenticity_detector.classify_image_authenticity(filepath, source_hint=source)
+        result = image_authenticity_detector.classify_image_authenticity(filepath)
     except Exception as e:
-        logger.warning(f"Neural model fallback to OpenCV Fourier detector: {e}")
-        result = ai_engine.analyze_image_deepfake(filepath, source=source)
-        result['category'] = 'ai_generated' if result.get('verdict') == 'AI IMAGE' else 'likely_original'
+        logger.error(f"Deep learning vision model failed during inference: {e}")
+        result = {
+            'status': 'uncertain',
+            'classification': 'UNABLE TO VERIFY',
+            'verdict': 'UNABLE TO VERIFY',
+            'category': 'uncertain',
+            'display_title': 'UNABLE TO VERIFY',
+            'status_text': 'UNABLE TO VERIFY',
+            'risk_level': 'Medium Risk',
+            'explanation': f"The pretrained neural model encountered an error during inference: {str(e)}",
+            'model_name': image_authenticity_detector.MODEL_NAME,
+            'model_version': image_authenticity_detector.MODEL_VERSION,
+            'processing_time_ms': 0,
+            'forensic_metrics': {'error': str(e)}
+        }
 
-    # Binary Classification Mappings: Only TWO outcomes: AI GENERATED IMAGE or ORIGINAL IMAGE
-    category = result.get('category', 'ai_generated')
+    # Strict Verdict Mapping: AI IMAGE, ORIGINAL IMAGE, or UNABLE TO VERIFY
+    category = result.get('category', 'uncertain')
     if category in ['ai_generated', 'fake']:
-        verdict = 'AI GENERATED IMAGE'
+        verdict = 'AI IMAGE'
         risk_level = 'High Risk'
-    else:
+    elif category in ['likely_original', 'original', 'real']:
         verdict = 'ORIGINAL IMAGE'
         risk_level = 'Safe'
+    else:
+        verdict = 'UNABLE TO VERIFY'
+        risk_level = 'Medium Risk'
 
     result['verdict'] = verdict
     result['classification'] = verdict
@@ -949,33 +988,97 @@ def scan_video():
                     f.write(base64.b64decode(b64))
             except Exception:
                 pass
+        elif preset or custom_name:
+            cand = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            if os.path.exists(cand):
+                filepath = cand
 
-    result = ai_engine.analyze_video_deepfake(filepath, filename=filename, preset=preset)
+    if not filepath or not os.path.exists(filepath):
+        cand = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(filename))
+        if os.path.exists(cand):
+            filepath = cand
+        else:
+            return jsonify({
+                'status': 'error',
+                'error': 'No valid video provided. Please upload a video file (MP4, WEBM, AVI, MOV, MKV).'
+            }), 400
+
+    # Validate video format and decodability
+    is_valid, val_err = video_authenticity_detector.validate_video_file(filepath)
+    if not is_valid:
+        return jsonify({
+            'status': 'error',
+            'error': val_err or 'Invalid or corrupted video file.'
+        }), 400
+
+    # Multi-frame neural vision transformer and temporal authenticity analysis
+    try:
+        result = video_authenticity_detector.classify_video_authenticity(filepath)
+    except Exception as e:
+        logger.error(f"[Video Scan] Neural detection error: {e}", exc_info=True)
+        raw = ai_engine.analyze_video_deepfake(filepath, filename=filename, preset=preset)
+        is_fake = raw.get('score', 0) >= 50 or raw.get('verdict') in ['DEEPFAKE DETECTED', 'AI GENERATED VIDEO']
+        verdict = 'AI GENERATED VIDEO' if is_fake else 'ORIGINAL VIDEO'
+        result = {
+            'status': 'success',
+            'classification': verdict,
+            'verdict': verdict,
+            'category': 'ai_generated' if is_fake else 'likely_original',
+            'risk_level': 'High Risk' if is_fake else 'Safe',
+            'score': None,
+            'confidence': None,
+            'model_score': None,
+            'fake_probability': None,
+            'real_probability': None,
+            'explanation': raw.get('explanation', ''),
+            'explanations': raw.get('explanations', [raw.get('explanation', '')]),
+            'recommendations': raw.get('recommendations', []),
+            'model_name': 'DeepVerify Video Detector Fallback',
+            'model_version': '3.2.0',
+            'processing_time_ms': 0,
+            'mediaType': 'VIDEO',
+            'details': raw.get('details', {})
+        }
+
+    # Strict binary outcome and zero percentages
+    verdict = result.get('verdict', 'AI GENERATED VIDEO')
+    risk_level = 'High Risk' if verdict == 'AI GENERATED VIDEO' else 'Safe'
+    result['verdict'] = verdict
+    result['classification'] = verdict
+    result['status_text'] = verdict
+    result['display_title'] = verdict
+    result['risk_level'] = risk_level
+    result['score'] = None
+    result['confidence'] = None
+    result['model_score'] = None
+    result['fake_probability'] = None
+    result['real_probability'] = None
+    result['mediaType'] = 'VIDEO'
     
     db = get_db()
     scan_doc = {
-        'user_id': user.get('user_id', user['sub']),
+        'user_id': user.get('user_id', user.get('sub', 'guest')),
         'user_email': user.get('email', '').lower(),
         'user_name': user.get('name', ''),
         'type': 'video',
         'input': filename,
-        'score': result['score'],
-        'risk_level': result['risk_level'],
-        'verdict': result['verdict'],
-        'confidence': result['confidence'],
-        'explanation': result['explanation'],
-        'details': result['details'],
+        'classification': verdict,
+        'category': result.get('category', 'ai_generated'),
+        'score': None,
+        'confidence': None,
+        'risk_level': risk_level,
+        'verdict': verdict,
+        'explanation': result.get('explanation', ''),
+        'details': result.get('details', {}),
         'created_at': _utcnow()
     }
     inserted = db['scans'].insert_one(scan_doc)
-    result['scanId'] = str(inserted.inserted_id) if hasattr(inserted, 'inserted_id') else f"scan_{int(time.time())}"
-    
-    _, _, recs = ai_engine.generate_overall_fraud_score([result])
-    result['recommendations'] = recs
-    result['mediaType'] = 'VIDEO'
+    scan_id_val = str(inserted.inserted_id) if hasattr(inserted, 'inserted_id') else f"scan_{int(time.time())}"
+    result['scanId'] = scan_id_val
+    result['scan_id'] = scan_id_val
     result['user_email'] = user.get('email', '').lower()
     result['user_name'] = user.get('name', '')
-    result['user_id'] = user.get('user_id', user['sub'])
+    result['user_id'] = user.get('user_id', user.get('sub', 'guest'))
     
     return jsonify(result), 200
 
@@ -1330,6 +1433,10 @@ with app.app_context():
         image_authenticity_detector.load_detection_models()
     except Exception as e:
         logger.warning(f"Could not pre-warm image models: {e}")
+    try:
+        video_authenticity_detector.load_video_detection_models()
+    except Exception as e:
+        logger.warning(f"Could not pre-warm video models: {e}")
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
