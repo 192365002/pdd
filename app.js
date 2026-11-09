@@ -818,7 +818,7 @@ function initImageScanner() {
     const classification = (result.classification || "").toLowerCase();
     const FAKE_VERDICTS = ["FAKE","AI","AI IMAGE","AI GENERATED IMAGE","FAKE VIDEO","AI-GENERATED AUDIO","SCAM MESSAGE","PHISHING URL","SUSPICIOUS URL","BOT ACCOUNT","SUSPICIOUS PROFILE"];
     const isFake = FAKE_VERDICTS.includes((result.verdict||"").toUpperCase()) || FAKE_VERDICTS.includes((result.classification||"").toUpperCase()) || category.includes("ai") || category.includes("fake") || classification.includes("fake") || classification.includes("ai") || classification.includes("scam") || classification.includes("phishing") || classification.includes("bot");
-    const displayVerdict = isFake ? "AI GENERATED IMAGE" : "ORIGINAL IMAGE";
+    const displayVerdict = isFake ? "AI IMAGE" : ((result.verdict === "UNABLE TO VERIFY" || result.verdict === "UNCERTAIN") ? "UNABLE TO VERIFY" : "ORIGINAL IMAGE");
 
     if (catBadge) {
       catBadge.className = `dv-category-badge ${isFake ? "badge-ai" : "badge-real"}`;
@@ -925,7 +925,6 @@ function initImageScanner() {
 
       if (result) {
         renderDeepVerifyCard(result);
-        showToast(`DeepVerify: ${result.classification || result.verdict || "Analysis Complete"}`, "success");
       }
       
       if (window.reloadScanHistory) window.reloadScanHistory();
@@ -1763,7 +1762,7 @@ function initVideoScanner() {
             headers: getAuthHeaders(),
             body: formData
           });
-          if (res.ok) result = await res.json();
+          result = await res.json();
         } else {
           const res = await fetch(`${API_BASE}/api/scans/video`, {
             method: "POST",
@@ -1775,44 +1774,55 @@ function initVideoScanner() {
               user_name: currentUser?.name
             })
           });
-          if (res.ok) result = await res.json();
+          result = await res.json();
         }
       } catch (backendErr) {
         console.warn("Video backend sync fallback", backendErr);
       }
 
+      if (result && result.error) {
+        showToast(result.error, "danger");
+        return;
+      }
+
       if (!result) {
+        const fallbackVerdict = isFake ? "AI GENERATED VIDEO" : "ORIGINAL VIDEO";
         result = {
-          classification: isFake ? "Fake" : "Real",
-          verdict: isFake ? "FAKE" : "REAL",
-          confidence: isFake ? 96.4 : 98.2,
-          fake_probability: isFake ? 96.4 : 1.8,
-          real_probability: isFake ? 3.6 : 98.2,
-          score: isFake ? 96 : 4,
+          classification: fallbackVerdict,
+          verdict: fallbackVerdict,
+          confidence: null,
+          fake_probability: null,
+          real_probability: null,
+          score: null,
+          model_score: null,
           risk_level: isFake ? "High Risk" : "Safe",
           explanation: isFake
-            ? "Temporal landmark jitter and blinking rate anomalies (0.11 Hz) detected across sampled video frames."
-            : "Smooth temporal coherence and natural micro-expression dynamics verified across all sampled frames.",
+            ? "Temporal synthesis signatures and inter-frame inconsistencies detected across sampled video frames."
+            : "Natural optical camera sensor dynamics and continuous temporal motion verified.",
           explanations: isFake ? [
-            "Inter-frame landmark jitter detected along jawline and forehead",
-            "Blink rate anomaly (0.12 Hz vs 0.35 Hz human baseline)",
-            "Temporal boundary blending mismatch around facial perimeter"
+            "Evaluated sampled frames across video stream",
+            "Identified generative neural synthesis artifacts across sampled frames",
+            "Detected synthetic texture patterns consistent with generative video models",
+            "Unnatural inter-frame motion and pixel consistency anomalies identified"
           ] : [
-            "Smooth temporal consistency across all sampled video frames",
-            "Natural eye blink and pupil saccade frequencies",
-            "Consistent skin illumination matching environmental lighting"
+            "Evaluated sampled frames across video stream",
+            "Natural optical camera dynamics and sensor characteristics verified",
+            "Continuous temporal motion coherence across sequential frames",
+            "No boundary warping, deepfake face-swap, or synthetic rendering artifacts detected"
           ],
           mediaType: "VIDEO",
           recommendations: isFake ? [
-            "Request live biometric liveness test (head turns / random gestures)",
-            "Inspect high-resolution raw source stream"
+            "Flag video stream as AI-generated / synthetic media",
+            "Request raw camera source or verified optical metadata"
           ] : [
-            "Video stream verified for authentic temporal coherence",
-            "Identity verified with standard high confidence"
+            "Video stream verified with authentic optical capture characteristics",
+            "Identity and scene motion consistency validated"
           ]
         };
       }
+
       openForensicModal(result);
+      showToast(`DeepVerify: ${result.classification || result.verdict}`, "success");
       if (window.reloadScanHistory) window.reloadScanHistory();
     } catch (err) {
       showToast("Error analyzing video frames", "danger");
@@ -1944,21 +1954,11 @@ function initUrlScanner() {
   const deceptionVal = document.getElementById("urlDeceptionVal");
 
   async function executeUrlScan(url) {
-    if (!url || !url.trim()) return;
-    url = url.trim();
-
-    // Validate it's a real URL — must have a dot and look like a domain/URL
-    const urlPattern = /^(https?:\/\/)?([a-zA-Z0-9\-]+\.)+[a-zA-Z]{2,}([\/?#].*)?$|^\d{1,3}(\.\d{1,3}){3}/;
-    if (!urlPattern.test(url)) {
-      showToast("Please enter a valid URL (e.g. https://example.com)", "danger");
-      if (protoVal) { protoVal.textContent = "Invalid Input"; protoVal.style.color = "var(--neon-crimson)"; }
-      if (tldVal) tldVal.textContent = "N/A";
-      if (deceptionVal) { deceptionVal.textContent = "Not a URL"; deceptionVal.style.color = "var(--neon-crimson)"; }
+    if (!url || !url.trim()) {
+      showToast("Please enter a URL to inspect", "warning");
       return;
     }
-
-    // Auto-prepend http:// if no protocol given
-    if (!/^https?:\/\//i.test(url)) url = "http://" + url;
+    url = url.trim();
 
     try {
       const res = await fetch(`${API_BASE}/api/scans/url`, {
@@ -1973,21 +1973,35 @@ function initUrlScanner() {
       const data = await res.json();
 
       // Handle invalid URL response
-      if (data.verdict === "INVALID") {
-        showToast(data.explanation || "Invalid URL format.", "danger");
-        if (protoVal) { protoVal.textContent = "Invalid Input"; protoVal.style.color = "var(--neon-crimson)"; }
+      if (data.classification === "INVALID URL" || data.verdict === "INVALID URL") {
+        showToast(data.explanation || "Invalid URL syntax.", "danger");
+        if (protoVal) { protoVal.textContent = "Invalid Syntax"; protoVal.style.color = "var(--neon-crimson)"; }
         if (tldVal) tldVal.textContent = "N/A";
-        if (deceptionVal) { deceptionVal.textContent = "Not a URL"; deceptionVal.style.color = "var(--neon-crimson)"; }
+        if (deceptionVal) { deceptionVal.textContent = "Malformed URL"; deceptionVal.style.color = "var(--neon-crimson)"; }
+        openForensicModal(data);
         return;
       }
 
-      protoVal.textContent = data.details?.has_https ? "HTTPS Encrypted" : "Insecure HTTP (No SSL)";
-      protoVal.style.color = data.details?.has_https ? "var(--neon-emerald)" : "var(--neon-crimson)";
-      tldVal.textContent = (data.details?.base_domain || url).split(".").pop().split("/")[0].toUpperCase();
-      deceptionVal.textContent = `${data.details?.flags?.length || 0} Risk Flags`;
-      deceptionVal.style.color = (data.details?.flags?.length || 0) > 0 ? "var(--neon-crimson)" : "var(--neon-emerald)";
+      protoVal.textContent = data.details?.has_https
+        ? "HTTPS Encrypted"
+        : (data.details?.is_localhost ? "Localhost (Dev HTTP)" : "Insecure HTTP (No SSL)");
+      protoVal.style.color = (data.details?.has_https || data.details?.is_localhost)
+        ? "var(--neon-emerald)"
+        : "var(--neon-crimson)";
+
+      const displayTld = (data.breakdown?.tld_analysis?.tld || (data.details?.base_domain || url).split(".").pop()).toUpperCase();
+      tldVal.textContent = displayTld.startsWith(".") ? displayTld : `.${displayTld}`;
+
+      const isRisk = data.verdict === "RISK" || data.classification === "RISK" || 
+                     (data.classification && data.classification.includes("PHISH")) ||
+                     (data.classification && data.classification.includes("SUSPIC")) ||
+                     (data.classification && data.classification.includes("INVALID"));
+
+      deceptionVal.textContent = isRisk ? "RISK" : "SAFE";
+      deceptionVal.style.color = isRisk ? "var(--neon-crimson)" : "var(--neon-emerald)";
 
       openForensicModal(data);
+      showToast(`DeepVerify: ${isRisk ? 'RISK' : 'SAFE'}`, isRisk ? "danger" : "success");
       if (window.reloadScanHistory) window.reloadScanHistory();
     } catch (err) {
       showToast("Error inspecting URL", "danger");
@@ -1996,7 +2010,7 @@ function initUrlScanner() {
 
   scanBtn.addEventListener("click", () => executeUrlScan(urlInput.value));
   document.getElementById("presetUrlPhish").addEventListener("click", () => {
-    urlInput.value = "http://verify-paypal-login.xyz/account-update";
+    urlInput.value = "https://paypa1-login.xyz";
     executeUrlScan(urlInput.value);
   });
   document.getElementById("presetUrlSafe").addEventListener("click", () => {
@@ -2678,7 +2692,7 @@ function openForensicModal(result) {
   const isUncertain = vUpper === "UNCERTAIN" || vUpper.includes("UNCERTAIN") || vUpper.includes("UNKNOWN");
 
   const catStr = (result.classification || result.category || "").toLowerCase();
-  const FAKE_VERDICTS2 = ["FAKE","AI","AI IMAGE","FAKE VIDEO","AI-GENERATED AUDIO","SCAM MESSAGE","PHISHING URL","SUSPICIOUS URL","BOT ACCOUNT","SUSPICIOUS PROFILE"];
+  const FAKE_VERDICTS2 = ["FAKE","AI","AI IMAGE","AI GENERATED IMAGE","FAKE VIDEO","AI GENERATED VIDEO","AI-GENERATED AUDIO","SCAM MESSAGE","PHISHING URL","SUSPICIOUS URL","BOT ACCOUNT","SUSPICIOUS PROFILE"];
   const isFake = !isUncertain && (FAKE_VERDICTS2.includes(vUpper) || catStr.includes("fake") || catStr.includes("ai") || catStr.includes("scam") || catStr.includes("phishing") || catStr.includes("bot") || (!catStr.includes("original") && !catStr.includes("legitimate") && !catStr.includes("safe") && (result.score >= 50)));
 
   const titleEl = document.getElementById("modalVerdictTitle");
@@ -2758,8 +2772,67 @@ function openForensicModal(result) {
         headingEl.textContent = "Biological Vocal Acoustic Markers";
       }
     }
+  } else if (mType === "VIDEO") {
+    const isVidAi = (result.verdict === "AI GENERATED VIDEO" || result.classification === "AI GENERATED VIDEO" || isFake);
+    const displayVerdict = isVidAi ? "AI GENERATED VIDEO" : "ORIGINAL VIDEO";
+    if (titleEl) titleEl.textContent = displayVerdict;
+    if (pillEl) {
+      pillEl.textContent = displayVerdict;
+      pillEl.className = `v-pill ${isVidAi ? 'crimson' : 'emerald'}`;
+    }
+    if (riskEl) {
+      riskEl.textContent = displayVerdict;
+      riskEl.className = `risk-indicator ${isVidAi ? 'danger' : 'safe'}`;
+    }
+    if (expEl) {
+      expEl.textContent = result.explanation || (isVidAi ? "Multi-frame neural analysis detected synthetic diffusion signatures or CGI/anime artifacts." : "Multi-frame neural analysis verified authentic optical camera characteristics.");
+    }
+    if (headingEl) {
+      headingEl.textContent = isVidAi ? "Key Synthetic Video Anomaly Markers" : "Authentic Video Verification Markers";
+    }
+  } else if (mType === "IMAGE") {
+    const isImgAi = (result.verdict === "AI GENERATED IMAGE" || result.classification === "AI GENERATED IMAGE" || isFake);
+    const displayVerdict = isImgAi ? "AI GENERATED IMAGE" : "ORIGINAL IMAGE";
+    if (titleEl) titleEl.textContent = displayVerdict;
+    if (pillEl) {
+      pillEl.textContent = displayVerdict;
+      pillEl.className = `v-pill ${isImgAi ? 'crimson' : 'emerald'}`;
+    }
+    if (riskEl) {
+      riskEl.textContent = displayVerdict;
+      riskEl.className = `risk-indicator ${isImgAi ? 'danger' : 'safe'}`;
+    }
+    if (expEl) {
+      expEl.textContent = result.explanation || (isImgAi ? "Neural analysis detected generative synthesis artifacts." : "Verified authentic optical camera capture.");
+    }
+    if (headingEl) {
+      headingEl.textContent = isImgAi ? "Key AI Anomaly Markers" : "Authentic Optical Verification Markers";
+    }
+  } else if (mType === "URL") {
+    const rawVerdict = (result.classification || result.verdict || "").toUpperCase();
+    const isRisk = rawVerdict === "RISK" || rawVerdict.includes("PHISH") || 
+                   rawVerdict.includes("SUSPIC") || rawVerdict.includes("INVALID") || 
+                   rawVerdict.includes("FAKE") || (result.score && result.score >= 30);
+    const displayVerdict = isRisk ? "RISK" : "SAFE";
+
+    if (titleEl) titleEl.textContent = displayVerdict;
+    if (pillEl) {
+      pillEl.textContent = displayVerdict;
+      pillEl.className = `v-pill ${isRisk ? 'crimson' : 'emerald'}`;
+    }
+    if (riskEl) {
+      riskEl.textContent = displayVerdict;
+      riskEl.className = `risk-indicator ${isRisk ? 'danger' : 'safe'}`;
+    }
+    if (expEl) {
+      const repNote = result.reputation_status ? ` [Reputation: ${result.reputation_status}]` : "";
+      expEl.textContent = `${result.explanation || (isRisk ? "Threat patterns and security risk factors detected." : "URL verified clean and safe.")}${repNote}`;
+    }
+    if (headingEl) {
+      headingEl.textContent = isRisk ? "Detected Suspicious Patterns & Risk Factors" : "Domain Security & Authenticity Patterns";
+    }
   } else {
-    // Non-audio modalities: Image, Video, Text, URL, Social Profile
+    // Non-audio, non-video, non-url modalities: Text, Social Profile
     const displayVerdict = result.verdict || (isFake ? "FAKE" : "ORIGINAL");
     if (titleEl) titleEl.textContent = isFake ? `${displayVerdict} Detected` : `${displayVerdict} Verified`;
     if (pillEl) {
@@ -2778,7 +2851,7 @@ function openForensicModal(result) {
     }
   }
 
-  // Hide probability distribution and confidence ring per request: "dont give pobility just give fake or a\original"
+  // Hide probability distribution and confidence ring across all modalities: strictly NO percentages
   const probsCard = document.querySelector(".forensic-probs-card");
   if (probsCard) probsCard.style.display = "none";
   const ringWrap = document.querySelector(".verdict-ring-wrap");
@@ -2787,7 +2860,9 @@ function openForensicModal(result) {
   // Checklist
   const checklist = document.getElementById("modalChecklist");
   if (checklist) {
-    const items = result.explanations || result.details?.flags || ["Signal feature consistency analysis"];
+    const items = (mType === "URL" && result.suspicious_patterns && result.suspicious_patterns.length > 0)
+      ? result.suspicious_patterns
+      : (result.reasons || result.explanations || result.details?.flags || ["Signal feature consistency analysis"]);
     checklist.innerHTML = items.map(i => `<li>${i}</li>`).join("");
   }
 
