@@ -59,10 +59,16 @@ def setup_test_suite():
     test_db = models.init_db()
 
     # Import app and reconfigure for testing
-    from app import app
+    from app import app, seed_initial_data
     app.config["TESTING"] = True
     app.config["UPLOAD_FOLDER"] = test_upload_dir
     app.config["WTF_CSRF_ENABLED"] = False
+
+    with app.app_context():
+        try:
+            seed_initial_data()
+        except Exception as ex:
+            print(f"[Notice] DB seed in test context: {ex}")
 
     yield test_db
 

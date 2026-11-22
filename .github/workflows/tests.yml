@@ -26,8 +26,10 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
 
-      - name: 📦 Install Project Dependencies
+      - name: 📦 Install System Dependencies & Python Packages
         run: |
+          sudo apt-get update
+          sudo apt-get install -y libgl1 libglib2.0-0 libsndfile1 ffmpeg
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install pytest pytest-mock
@@ -35,7 +37,7 @@ jobs:
       - name: 🚀 Execute Automated Tests (TC01 - TC15)
         run: |
           mkdir -p test-reports
-          python -m pytest tests/test_deepverify_suite.py -v --junitxml=test-reports/junit.xml
+          python -m pytest tests/test_deepverify_suite.py -v -s --tb=short --junitxml=test-reports/junit.xml
 
       - name: 📊 Publish Test Summary to GitHub Actions Summary
         if: always()
