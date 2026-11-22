@@ -25,7 +25,22 @@ os.environ["TRANSFORMERS_OFFLINE"] = "1"
 try:
     import torch
 except ImportError:
-    sys.modules["torch"] = MagicMock()
+    class FakeTensor:
+        pass
+    class FakeTorch:
+        Tensor = FakeTensor
+        def __init__(self):
+            self.Tensor = FakeTensor
+        def no_grad(self):
+            class _NoGrad:
+                def __enter__(self): pass
+                def __exit__(self, *args): pass
+            return _NoGrad()
+        def get_num_threads(self):
+            return 1
+        def set_num_threads(self, n):
+            pass
+    sys.modules["torch"] = FakeTorch()
 
 try:
     import transformers
