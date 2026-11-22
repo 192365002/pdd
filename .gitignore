@@ -1,49 +1,87 @@
-# Android build files
-*.iml
-.gradle
-/local.properties
-/.idea/workspace.xml
-/.idea/libraries
+# Environment configuration files and secrets
+.env
+*.env
+!*.env.example
+.env.*
+!.env.example
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
+
+# Python cache & virtual environment
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+backend/venv/
+.pytest_cache/
+.coverage
+htmlcov/
+test-reports/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+socialshield.db
+
+# Backup and scratch files
+*.bak
+*.bak*
+scratch/
+ai_engine.py.bak
+app.py.bak
+audio_classifier.py.bak
+image_authenticity_detector.py.bak*
+
+# Node / Frontend artifacts
+node_modules/
+frontend/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+dist/
+frontend/dist/
+build/
+.vite/
+frontend/.vite/
+
+# Browser drivers & test execution logs
+chromedriver*
+geckodriver*
+*.log
+selenium.log
+ghostdriver.log
+selenium_test_results.xlsx
+selenium_test_results_latest.xlsx
+
+# IDE & OS files
 .DS_Store
-/build
-/capture
-/android/build
-/android/app/build
-/android/.gradle
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+*.iml
+
+# Android & Gradle
+.gradle/
+/local.properties
+/android/build/
+/android/app/build/
+/android/.gradle/
 /android/local.properties
 
-# Appium framework outputs
+# Appium framework dynamic test runs
 /AppiumFramework/target/
 /AppiumFramework/logs/
 /AppiumFramework/reports/failedScreenshots/
-~$*
-# Keep reports folder templates but ignore actual dynamic outputs if desired (we can check-in templates if wanted)
 
-# Python virtual environment and cache
-/backend/venv/
-__pycache__/
-*.pyc
-.pytest_cache/
-
-# IDE files
-.idea/
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-*.zip
-/apache-maven-3.9.6/
-/app-build/
-/flutter_app/android/build/
-/flutter_app/build/
-
-# Temporary user scan uploads
-/static/uploads/capture_*
-/static/uploads/voice_record_*
-/static/uploads/live_camera_*
-/static/uploads/1791*
-/static/uploads/*.png
-/static/uploads/*.jpg
-/static/uploads/*.jpeg
-/static/uploads/*.wav
+# Temporary user scan uploads (preserve directory structure)
+/static/uploads/*
+!/static/uploads/.gitkeep

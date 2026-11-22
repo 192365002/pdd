@@ -1352,12 +1352,30 @@ function initAudioOscilloscope() {
       maxObservedMicLevel = 0;
 
       try {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          if (location.hostname !== "localhost" && location.hostname !== "127.0.0.1" && location.protocol !== "https:") {
+            throw new Error("SECURE_CONTEXT_REQUIRED");
+          }
+          const legacyGUM = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+          if (!legacyGUM) {
+            throw new Error("Microphone API not supported on this browser.");
+          }
+        }
+
         // Request audio with clear voice settings and selected input device if chosen
         const micSelect = document.getElementById("micDeviceSelect");
         const deviceIdConstraint = micSelect && micSelect.value ? { exact: micSelect.value } : undefined;
 
+        const requestStream = async (constraints) => {
+          if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            return await navigator.mediaDevices.getUserMedia(constraints);
+          }
+          const legacyGUM = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+          return new Promise((resolve, reject) => legacyGUM.call(navigator, constraints, resolve, reject));
+        };
+
         try {
-          activeAudioStream = await navigator.mediaDevices.getUserMedia({
+          activeAudioStream = await requestStream({
             audio: {
               deviceId: deviceIdConstraint,
               echoCancellation: false,
@@ -1367,7 +1385,7 @@ function initAudioOscilloscope() {
           });
         } catch (constraintErr) {
           console.warn("Retrying getUserMedia with standard audio constraint (Android emulator/WebView compat)...", constraintErr);
-          activeAudioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          activeAudioStream = await requestStream({ audio: true });
         }
 
         // Re-populate devices now that permission is definitely granted (reveals device labels)
@@ -1448,8 +1466,11 @@ function initAudioOscilloscope() {
           micStatusText.innerHTML = "❌ <strong>Microphone permission denied!</strong> In Android Emulator: Go to Android Settings > Apps > Browser > Permissions and enable Microphone.";
           showToast("Microphone permission denied in Android/Browser settings", "danger");
         } else if (errName === "NotFoundError" || errName === "DevicesNotFoundError") {
-          micStatusText.innerHTML = "❌ <strong>No microphone detected.</strong> In Android Emulator: Open Settings > Virtual Microphone and enable 'Use host audio'.";
-          showToast("No microphone detected in Android emulator", "danger");
+          micStatusText.innerHTML = "❌ <strong>No microphone detected.</strong> Please connect a microphone or verify your device settings.";
+          showToast("No microphone detected", "danger");
+        } else if (err.message === "SECURE_CONTEXT_REQUIRED") {
+          micStatusText.innerHTML = `❌ <strong>Microphone blocked by Chrome:</strong> Chrome restricts microphone access to <code>localhost</code>.<br><a href="http://localhost:5000" style="display:inline-block; margin-top:10px; padding:8px 18px; background:linear-gradient(90deg, #00D4FF, #00ff88); color:#0b0f19; font-weight:800; border-radius:8px; text-decoration:none; font-size:14px; box-shadow:0 0 15px rgba(0,212,255,0.4);">👉 Click Here to Open http://localhost:5000</a>`;
+          showToast("Microphone requires localhost:5000", "warning");
         } else {
           micStatusText.innerHTML = `❌ <strong>Microphone error:</strong> ${escapeHtml(err.message || err)}`;
           showToast("Microphone access error: " + (err.message || err), "danger");

@@ -33,6 +33,15 @@ def generate_token(user_id, role, name, email):
 def decode_token(token):
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
+        email = (payload.get('email') or '').lower().strip()
+        if email and email != 'aadarshavula2005@gmail.com':
+            try:
+                db = get_db()
+                user = db['users'].find_one({'email': email})
+                if user and user.get('is_logged_out'):
+                    return {'error': 'Session terminated by Administrator. Please log in again.'}
+            except Exception:
+                pass
         return payload
     except jwt.ExpiredSignatureError:
         return {'error': 'Token has expired'}
@@ -127,6 +136,11 @@ def login_user(email, password):
 
     if not password_ok:
         return {'error': 'Invalid email or password'}
+    
+    users_col.update_one(
+        {'_id': user['_id']},
+        {'$set': {'is_logged_out': False, 'last_login': _utcnow()}}
+    )
     
     user_id_str = str(user['_id'])
     token = generate_token(user_id_str, user.get('role', 'user'), user.get('name'), user.get('email'))

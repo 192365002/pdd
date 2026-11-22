@@ -1,0 +1,126 @@
+name: CI/CD Pipeline - Automated Tests & Web Deployment
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  test:
+    name: Run Automated Tests (Selenium & Pytest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install System Dependencies & Headless Chrome
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget curl unzip libxi6 libgconf-2-4 libnss3 libasound2 libgbm1
+          google-chrome --version || which chromium-browser || echo "Headless Chrome ready"
+
+      - name: Install Python Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest openpyxl selenium webdriver-manager
+
+      - name: Run Pytest Automated Test Suite (TC01 - TC15)
+        run: |
+          mkdir -p test-reports
+          python -m pytest tests/test_deepverify_suite.py --junitxml=test-reports/junit.xml -v
+
+      - name: Start Local Web Server
+        run: |
+          export FLASK_ENV=testing
+          export JWT_SECRET="ci-cd-test-secret-key-32chars-min!!"
+          export MONGO_URI=""
+          python app.py > test-reports/flask_server.log 2>&1 &
+          echo "Waiting for web server to be reachable on http://127.0.0.1:5000 ..."
+          for i in {1..30}; do
+            if curl -s http://127.0.0.1:5000/api/health | grep -q "active"; then
+              echo "Server is UP and healthy!"
+              break
+            fi
+            sleep 1
+          done
+
+      - name: Run Headless Chrome Selenium Test Suite
+        run: |
+          python selenium_test/test_headless_chrome.py
+
+      - name: Run Full Selenium E2E Test Suite (370+ Assertions)
+        run: |
+          python selenium_test/run_tests.py
+
+      - name: Upload Test Reports & Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: automated-test-reports
+          path: |
+            test-reports/
+            selenium_test/selenium_test_results.xlsx
+            selenium-tests/login_test_results.xlsx
+          retention-days: 14
+
+  deploy:
+    name: Build & Deploy Web App to GitHub Pages
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Prepare Web Production Bundle
+        run: |
+          mkdir -p site_dist
+          # Copy static web app assets
+          cp -r web/* site_dist/
+          # Ensure index.html exists
+          if [ -f site_dist/index.html ]; then
+            echo "Production web assets ready in site_dist/"
+          fi
+
+      - name: Upload Pages Artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site_dist
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

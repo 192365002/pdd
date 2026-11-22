@@ -358,37 +358,38 @@ def analyze_image_deepfake(image_path, source=''):
 
 
 # ====================================================
-# MODULE 3: AUDIO & VOICE CLONE DETECTION (Calibrated ML + Signal Forensics)
+# MODULE 3: AUDIO & VOICE CLONE DETECTION
 # ====================================================
 
 def analyze_audio_voice_clone(audio_path_or_bytes=None, filename=None, preset=None):
     """
-    Analyzes actual audio signal for synthetic voice and neural vocoder markers
-    using 40-dimensional acoustic feature extraction (MFCCs, spectral dynamics,
-    glottal jitter, formant transitions, and high-frequency upsampling artifacts)
-    and a calibrated machine learning classifier.
-    Never guesses based on filename, extension, or preset name.
+    Analyzes uploaded audio signals through audio_classifier without relying on
+    filenames, extensions, or preset names, and never synthesizes fake preset
+    audio or guesses verdicts when a verified pretrained model is unavailable.
     """
     import audio_classifier
+    import tempfile
 
     filepath = audio_path_or_bytes if isinstance(audio_path_or_bytes, str) else None
+    temp_path = None
 
-    # If no audio file was uploaded but preset requested via API/UI, generate actual acoustic audio signal to analyze
-    if (not filepath or not os.path.exists(filepath) or os.path.getsize(filepath) < 100) and preset:
-        preset_lower = str(preset).lower()
-        upload_dir = os.path.join(os.path.dirname(__file__), "static", "uploads")
-        os.makedirs(upload_dir, exist_ok=True)
-        preset_file = os.path.join(upload_dir, f"preset_{preset_lower}_{int(time.time())}.wav")
+    try:
+        if filepath is None and isinstance(audio_path_or_bytes, (bytes, bytearray)) and len(audio_path_or_bytes) > 0:
+            fd, temp_path = tempfile.mkstemp(suffix=".wav", prefix="deepverify_audio_")
+            with os.fdopen(fd, "wb") as tmp_f:
+                tmp_f.write(audio_path_or_bytes)
+            filepath = temp_path
 
-        label_type = "ai_clone" if preset_lower in ("synthetic", "ai", "clone", "fake") else "human"
-        sig = audio_classifier.generate_voice_sample(label_type=label_type, sr=16000, duration=2.5)
-        import scipy.io.wavfile
-        scipy.io.wavfile.write(preset_file, 16000, (sig * 32767).astype(np.int16))
-        filepath = preset_file
+        if not filepath or not os.path.exists(filepath):
+            return audio_classifier.predict_audio_voice_clone(filepath, filename=filename)
 
-    # Run signal-based calibrated ML audio detection
-    result = audio_classifier.predict_audio_voice_clone(filepath, filename=filename)
-    return result
+        return audio_classifier.predict_audio_voice_clone(filepath, filename=filename)
+    finally:
+        if temp_path and os.path.exists(temp_path):
+            try:
+                os.remove(temp_path)
+            except OSError:
+                pass
 
 
 # ====================================================
