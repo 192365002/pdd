@@ -21,6 +21,17 @@ os.environ["JWT_SECRET"] = "test-jwt-secret-key-deepverify-qa-2026"
 os.environ["HF_HUB_OFFLINE"] = "1"
 os.environ["TRANSFORMERS_OFFLINE"] = "1"
 
+# Safe fallback for torch and transformers in lightweight CI environments
+try:
+    import torch
+except ImportError:
+    sys.modules["torch"] = MagicMock()
+
+try:
+    import transformers
+except ImportError:
+    sys.modules["transformers"] = MagicMock()
+
 # Mock pre-warm loading functions to ensure CI test suite runs ultra-fast and reliably offline
 import image_authenticity_detector
 import video_authenticity_detector

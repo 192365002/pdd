@@ -111,6 +111,7 @@ jobs:
           cp -r web/* site_dist/
           # Remove heavy apk from pages artifact if present to speed up deployment
           rm -f site_dist/app-debug.apk || true
+          touch site_dist/.nojekyll
           echo "Production web assets ready in site_dist/"
 
       - name: Upload Pages Artifact
