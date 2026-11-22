@@ -2,7 +2,7 @@ name: DeepVerify Automated Test Suite & CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, master, '**' ]
+    branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
   workflow_dispatch:
@@ -35,9 +35,7 @@ jobs:
       - name: 🚀 Execute Automated Tests (TC01 - TC15)
         run: |
           mkdir -p test-reports
-          python -m pytest tests/test_deepverify_suite.py \
-            -v \
-            --junitxml=test-reports/junit.xml
+          python -m pytest tests/test_deepverify_suite.py -v --junitxml=test-reports/junit.xml
 
       - name: 📊 Publish Test Summary to GitHub Actions Summary
         if: always()
@@ -55,4 +53,3 @@ jobs:
             test-reports/junit.xml
             test-reports/test_report.md
           retention-days: 30
-
