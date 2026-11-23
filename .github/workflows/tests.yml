@@ -34,10 +34,22 @@ jobs:
           pip install -r requirements.txt
           pip install pytest pytest-mock
 
-      - name: 🚀 Execute Automated Tests (TC01 - TC15)
+      - name: 🚀 Execute Pytest Automated Tests (TC01 - TC15)
         run: |
           mkdir -p test-reports
           python -m pytest tests/test_deepverify_suite.py -v -s --tb=short --junitxml=test-reports/junit.xml
+
+      - name: 🌐 Run Selenium Web Automation Test Suite (370+ Tests)
+        run: |
+          python selenium_test/run_tests.py
+
+      - name: 📱 Run Appium Mobile Automation Test Suite (500 Tests)
+        run: |
+          python appium_test/run_tests.py
+
+      - name: 🔬 Run Backend REST API & Classifier Test Suite (344 Tests)
+        run: |
+          python "backend test/run_tests.py"
 
       - name: 📊 Publish Test Summary to GitHub Actions Summary
         if: always()
@@ -46,12 +58,15 @@ jobs:
             cat test-reports/test_report.md >> $GITHUB_STEP_SUMMARY
           fi
 
-      - name: 📤 Upload Test Reports Artifact
+      - name: 📤 Upload All Test Reports & Excel Artifacts (Pytest, Selenium, Appium, Backend)
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: deepverify-test-reports
+          name: complete-automated-test-reports
           path: |
             test-reports/junit.xml
             test-reports/test_report.md
+            selenium_test/*.xlsx
+            appium_test/*.xlsx
+            backend test/*.xlsx
           retention-days: 30
